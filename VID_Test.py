@@ -86,7 +86,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
        
         if use_gpu:
             imgs = imgs.cuda()
-        imgs = Variable(imgs, volatile=True)
+        #imgs = Variable(imgs, volatile=True)
         
         b,  s, c, h, w = imgs.size()
         
@@ -108,7 +108,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
       for batch_idx, (imgs, pids, camids,_) in enumerate(galleryloader):
         if use_gpu:
             imgs = imgs.cuda()
-        imgs = Variable(imgs, volatile=True)
+        #imgs = Variable(imgs, volatile=True)
         b, s,c, h, w = imgs.size()
         features = model(imgs,pids,cam_label=camids)
         features = features.view(b, -1)
@@ -158,7 +158,7 @@ if __name__ == '__main__':
   
 
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name)
-    model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrainpath)
+    model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth')
 
     device = "cuda"
     model=model.to(device)
