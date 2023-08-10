@@ -30,12 +30,12 @@ def train_collate_fn(batch):
     camids = torch.tensor(camids, dtype=torch.int64)
     return torch.stack(imgs, dim=0), pids, camids, torch.stack(a, dim=0)
 
-def val_collate_fn(batch):
-    
-    imgs, pids, camids, img_paths = zip(*batch)
-    viewids = torch.tensor(viewids, dtype=torch.int64)
-    camids_batch = torch.tensor(camids, dtype=torch.int64)
-    return torch.stack(imgs, dim=0), pids, camids_batch,  img_paths
+# def val_collate_fn(batch):
+#
+#     imgs, pids, camids, img_paths = zip(*batch)
+#     viewids = torch.tensor(viewids, dtype=torch.int64)
+#     camids_batch = torch.tensor(camids, dtype=torch.int64)
+#     return torch.stack(imgs, dim=0), pids, camids_batch,  img_paths
 
 def dataloader(Dataset_name):
     train_transforms = T.Compose([
@@ -106,6 +106,8 @@ class VideoDataset(Dataset):
     def __getitem__(self, index):
         img_paths, pid, camid = self.dataset[index]
         num = len(img_paths)
+
+
 
         # if self.sample == 'restricted_random':
         #     frame_indices = range(num)
@@ -242,9 +244,9 @@ class VideoDataset(Dataset):
         elif self.sample == 'intelligent_random':
             # frame_indices = range(num)
             indices = []
-            each = max(num//seq_len,1)
-            for  i in range(seq_len):
-                if i != seq_len -1:
+            each = max(num//self.seq_len,1)
+            for  i in range(self.seq_len):
+                if i != self.seq_len -1:
                     indices.append(random.randint(min(i*each , num-1), min( (i+1)*each-1, num-1)) )
                 else:
                     indices.append(random.randint(min(i*each , num-1), num-1) )
