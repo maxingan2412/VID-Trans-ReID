@@ -158,7 +158,7 @@ if __name__ == '__main__':
   
 
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name)
-    model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=None)
+    model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrainpath)
 
     device = "cuda"
     model=model.to(device)

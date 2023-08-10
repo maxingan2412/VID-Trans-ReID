@@ -79,3 +79,6 @@ If you are making use of this work in any way, you must please reference the fol
  url = {https://breckon.org/toby/publications/papers/alsehaim22vidtransreid.pdf}
 }
 ```
+
+
+python -u VID_Test.py --Dataset_name 'Mars' --model_path 'Transformer.pth'
