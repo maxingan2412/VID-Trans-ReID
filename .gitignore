@@ -1,0 +1,8 @@
+# 忽略所有 .log 文件
+#*.log
+
+# 忽略名为 temp 的文件夹
+data/
+
+# 忽略名为 data.txt 的文件
+#data.txt
