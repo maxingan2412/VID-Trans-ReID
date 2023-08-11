@@ -19,6 +19,11 @@ class Mars(object):
     # cameras: 6
     Args:
         min_seq_len (int): tracklet with length shorter than this value will be discarded (default: 0).
+        2A6D-035A
+
+
+        这个数据集的图片是按照tracklet来组织的，每个tracklet是一个行人的视频，每个tracklet有多张图片，每张图片都有一个id，这个id是全局唯一的，同时一个id可能对应多个tracklet，因为一个行人可能出现在多个摄像头中。
+        具体到数据集中 每个
     """
    
     #root  ='MARS' #'/home2/zwjx97/STE-NVAN-master/MARS' #"/home/aishahalsehaim/Desktop/STE-NVAN-master/MARS" 
@@ -35,9 +40,9 @@ class Mars(object):
         self._check_before_run()
         
         # prepare meta data
-        train_names = self._get_names(self.train_name_path)
+        train_names = self._get_names(self.train_name_path) # 这里得到的是一个列表，509914，每个形如 123131.jpg，是图片的名字
         test_names = self._get_names(self.test_name_path)
-        track_train = loadmat(self.track_train_info_path)['track_train_info'] # numpy.ndarray (8298, 4)
+        track_train = loadmat(self.track_train_info_path)['track_train_info'] # numpy.ndarray (8298, 4) 形如 [1, 16, 1, 1]， 前俩是图片序号，3是id，4是摄像头id
         track_test = loadmat(self.track_test_info_path)['track_test_info'] # numpy.ndarray (12180, 4)
         query_IDX = loadmat(self.query_IDX_path)['query_IDX'].squeeze() # numpy.ndarray (1980,)
         query_IDX -= 1 # index from 0

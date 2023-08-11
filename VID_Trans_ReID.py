@@ -150,8 +150,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="VID-Trans-ReID")
     parser.add_argument(
         "--Dataset_name", default="", help="The name of the DataSet", type=str)
+    parser.add_argument(
+        "--ViT_path", default="", help="The name of the vit pth", type=str)
+
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
+    pretrained_path = args.ViT_path
     torch.manual_seed(1234)
     torch.cuda.manual_seed(1234)
     torch.cuda.manual_seed_all(1234)
@@ -160,7 +164,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True    
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name)
-    model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrainpath)
+    model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path)
     
     loss_fun,center_criterion= make_loss( num_classes=num_classes)
     optimizer_center = torch.optim.SGD(center_criterion.parameters(), lr= 0.5)

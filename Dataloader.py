@@ -47,7 +47,10 @@ def dataloader(Dataset_name):
             T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             
             
-        ])
+        ]) #义了一个数据增强的转换序列 train_transforms，用于在训练数据上进行预处理操作。这些操作有助于提高模型的泛化能力和性能，同时也可以增加数据的多样性。
+    #T.Compose 是一个转化，不用管里面什么结构 就是已定义了这个转化 然后用的时候
+    # image = PIL.Image.open('image.jpg')
+    # transformed_image = transform(image)
 
     val_transforms = T.Compose([
         T.Resize([256, 128]),
@@ -57,7 +60,7 @@ def dataloader(Dataset_name):
 
     
 
-    dataset = __factory[Dataset_name]()
+    dataset = __factory[Dataset_name]() # 这里指向mars数据集，看mars类中是怎么构造出这个数据集的 再这里
     train_set = VideoDataset_inderase(dataset.train, seq_len=4, sample='intelligent',transform=train_transforms)
     num_classes = dataset.num_train_pids
     cam_num = dataset.num_train_cams
