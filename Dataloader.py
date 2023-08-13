@@ -16,19 +16,21 @@ from Datasets.MARS_dataset import Mars
 from Datasets.iLDSVID import iLIDSVID
 from Datasets.PRID_dataset import PRID
 
+import os
+
 __factory = {
     'Mars':Mars,
     'iLIDSVID':iLIDSVID,
     'PRID':PRID
 }
 
-def train_collate_fn(batch):
+def train_collate_fn(batch): #batch 是一个64的list，每个元素是 是一个含有4个元素的tuple，比如 0 是 一个 4 3 256 128 的tensor 1是78 2 是一个 list [4,4,4,4],3 是一个tensor tensor([1, 1, 1, 1])
     
     imgs, pids, camids,a= zip(*batch)
     pids = torch.tensor(pids, dtype=torch.int64)
     
     camids = torch.tensor(camids, dtype=torch.int64)
-    return torch.stack(imgs, dim=0), pids, camids, torch.stack(a, dim=0)
+    return torch.stack(imgs, dim=0), pids, camids, torch.stack(a, dim=0) # imgs tuple64  tensor 4,3,256,128   torch.stack(imgs, dim=0): tensor 64,4,3,256,128
 
 # def val_collate_fn(batch):
 #
@@ -60,14 +62,14 @@ def dataloader(Dataset_name):
 
     
 
-    dataset = __factory[Dataset_name]() # 这里指向mars数据集，看mars类中是怎么构造出这个数据集的 再这里
-    train_set = VideoDataset_inderase(dataset.train, seq_len=4, sample='intelligent',transform=train_transforms)
+    dataset = __factory[Dataset_name]() # 这里指向mars数据集，看mars类中是怎么构造出这个数据集的 再这里,获得了datasets类的实例，这个实例就是mars数据集，里面有train，query，gallery等等
+    train_set = VideoDataset_inderase(dataset.train, seq_len=4, sample='intelligent',transform=train_transforms) #可以认为是把mars数据集中的train部分拿出来，然后用VideoDataset类进行处理，这里是RandomErasing3， 得到train_set
     num_classes = dataset.num_train_pids
     cam_num = dataset.num_train_cams
     view_num = dataset.num_train_vids
 
-   
-    train_loader = DataLoader(train_set, batch_size=64,sampler=RandomIdentitySampler(dataset.train, 64,4),num_workers=4, collate_fn=train_collate_fn)
+   # 这里该bs
+    train_loader = DataLoader(train_set, batch_size=32,sampler=RandomIdentitySampler(dataset.train, 32,4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
   
     q_val_set = VideoDataset(dataset.query, seq_len=4, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset.gallery, seq_len=4, sample='dense', transform=val_transforms)
@@ -77,17 +79,28 @@ def dataloader(Dataset_name):
 
 
 
+# def read_image(img_path):
+#     """Keep reading image until succeed.
+#     This can avoid IOError incurred by heavy IO process."""
+#     got_img = False
+#     while not got_img:
+#         try:
+#             img = Image.open(img_path).convert('RGB')
+#             got_img = True
+#         except IOError:
+#             print("IOError incurred when reading '{}'. Will redo. Don't worry. Just chill.".format(img_path))
+#             pass
+#     return img
 def read_image(img_path):
-    """Keep reading image until succeed.
-    This can avoid IOError incurred by heavy IO process."""
     got_img = False
     while not got_img:
         try:
-            img = Image.open(img_path).convert('RGB')
+            real_img_path = os.path.realpath(img_path)
+            img = Image.open(real_img_path).convert('RGB')
             got_img = True
         except IOError:
             print("IOError incurred when reading '{}'. Will redo. Don't worry. Just chill.".format(img_path))
-            pass
+            return None
     return img
 
 class VideoDataset(Dataset):
@@ -289,7 +302,7 @@ class VideoDataset_inderase(Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index): #__getitem__ 方法通过使对象支持索引操作，使得我们可以按照序列的方式访问自定义类的元素,__是双下划线（__）开头和结尾的函数在Python中被称为"魔法方法"（magic methods）或"特殊方法"（special methods）。这些方法是Python类中的特殊函数，用于定义类的行为，例如初始化、比较、运算符重载等。这些魔法方法会在特定的上下文中被自动调用，而不需要直接调用它们。
         img_paths, pid, camid = self.dataset[index]
         num = len(img_paths)
         if self.sample != "intelligent":
@@ -324,6 +337,12 @@ class VideoDataset_inderase(Dataset):
             img_path = img_paths[index]
             
             img = read_image(img_path)
+
+            if img is None:
+                # Skip this image and continue with the next one
+                continue
+
+
             if self.transform is not None:
                 img = self.transform(img)
             img , temp  = self.erase(img)
