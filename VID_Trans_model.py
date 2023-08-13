@@ -68,34 +68,34 @@ class VID_Trans(nn.Module):
         camera=camera_num,  drop_path_rate=0.1, drop_rate=0.0, attn_drop_rate=0.0,norm_layer=partial(nn.LayerNorm, eps=1e-6),  cam_lambda=3.0)
         
           
-        state_dict = torch.load(pretrainpath, map_location='cpu')
-        self.base.load_param(state_dict,load=True)
+        state_dict = torch.load(pretrainpath, map_location='cpu') # jx 这个是pretained vit，state_dict是一个字典，里面包括模型的各层的一些参数,map是加载的位置
+        self.base.load_param(state_dict,load=True) #给模型加载这些参数
         
        
         #global stream
-        block= self.base.blocks[-1]
+        block= self.base.blocks[-1] # 拿blocks的最后一个block
         layer_norm = self.base.norm
         self.b1 = nn.Sequential(
             copy.deepcopy(block),
             copy.deepcopy(layer_norm)
         )
         
-        self.bottleneck = nn.BatchNorm1d(self.in_planes)
-        self.bottleneck.bias.requires_grad_(False)
+        self.bottleneck = nn.BatchNorm1d(self.in_planes) #BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bottleneck.bias.requires_grad_(False) #在这个例子中，self.bottleneck 是一个 nn.BatchNorm1d 层，它包括一个偏置（bias）参数。通过 self.bottleneck.bias.requires_grad_(False)，作者将这个偏置参数的梯度计算设置为不需要进行梯度更新,但是weigth是需要更新的
         self.bottleneck.apply(weights_init_kaiming)
-        self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False)
+        self.classifier = nn.Linear(self.in_planes, self.num_classes, bias=False) # Linear(in_features=768, out_features=625, bias=False)
         self.classifier.apply(weights_init_classifier)
        
         #-----------------------------------------------
         #-----------------------------------------------
- 
+        #假设你有一个全连接层的输出形状为 (batch_size, num_features)，其中 batch_size=8 和 num_features=512。对于 LayerNorm，你会对每个样本的 512 个特征进行标准化，而不是像 BatchNorm 那样对每个特征的 8 个样本值进行标准化。
 
         # building local video stream
         dpr = [x.item() for x in torch.linspace(0, 0, 12)]  # stochastic depth decay rule
         
         self.block1 = Block(
                 dim=3072, num_heads=12, mlp_ratio=4, qkv_bias=True, qk_scale=None,
-                drop=0, attn_drop=0, drop_path=dpr[11], norm_layer=partial(nn.LayerNorm, eps=1e-6))
+                drop=0, attn_drop=0, drop_path=dpr[11], norm_layer=partial(nn.LayerNorm, eps=1e-6)) #partial是偏函数，就是把nn.LayerNorm的参数eps=1e-6固定下来，这样就不用每次都写了
        
         self.b2 = nn.Sequential(
             self.block1,
@@ -103,7 +103,7 @@ class VID_Trans(nn.Module):
         )
         
         
-        self.bottleneck_1 = nn.BatchNorm1d(3072)
+        self.bottleneck_1 = nn.BatchNorm1d(3072) # BatchNorm1d(3072, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bottleneck_1.bias.requires_grad_(False)
         self.bottleneck_1.apply(weights_init_kaiming)
         self.bottleneck_2 = nn.BatchNorm1d(3072)
@@ -129,7 +129,7 @@ class VID_Trans(nn.Module):
 
         #-------------------video attention-------------
         self.middle_dim = 256 # middle layer dimension
-        self.attention_conv = nn.Conv2d(self.in_planes, self.middle_dim, [1,1]) # 7,4 cooresponds to 224, 112 input image size
+        self.attention_conv = nn.Conv2d(self.in_planes, self.middle_dim, [1,1]) # 7,4 cooresponds to 224, 112 input image size  Conv2d(768, 256, kernel_size=[1, 1], stride=(1, 1))
         self.attention_tconv = nn.Conv1d(self.middle_dim, 1, 3, padding=1)
         self.attention_conv.apply(weights_init_kaiming) 
         self.attention_tconv.apply(weights_init_kaiming) 
@@ -143,15 +143,15 @@ class VID_Trans(nn.Module):
 
 
     def forward(self, x, label=None, cam_label= None, view_label=None):  # label is unused if self.cos_layer == 'no'
-        b=x.size(0)
-        t=x.size(1)
-        
+        b=x.size(0) # batch size 32
+        t=x.size(1) # seq 4
+        # 32 4 3 256 128  ---->  128 3 256 128
         x=x.view(x.size(0)*x.size(1), x.size(2), x.size(3), x.size(4))
-        features = self.base(x, cam_label=cam_label)
+        features = self.base(x, cam_label=cam_label) # 128 129 768
         
         
         # global branch
-        b1_feat = self.b1(features) # [64, 129, 768]
+        b1_feat = self.b1(features) # [128, 129, 768]
         global_feat = b1_feat[:, 0]
         
         global_feat=global_feat.unsqueeze(dim=2)

@@ -2,6 +2,7 @@ import torch
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
 from PIL import Image, ImageFile
+import matplotlib.pyplot as plt
 
 from torch.utils.data import Dataset
 import os.path as osp
@@ -70,7 +71,7 @@ def dataloader(Dataset_name):
 
    # 这里该bs
     train_loader = DataLoader(train_set, batch_size=32,sampler=RandomIdentitySampler(dataset.train, 32,4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
-  
+  #暂时就认为上面的一些东西 让我们构建了dataloader。dataloader很多的构建方式是让每一个batch的数据比较平衡，比如bs32 seq4，我们就让一个batch里面有8个id，每个id有4个seq
     q_val_set = VideoDataset(dataset.query, seq_len=4, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset.gallery, seq_len=4, sample='dense', transform=val_transforms)
     
@@ -100,7 +101,7 @@ def read_image(img_path):
             got_img = True
         except IOError:
             print("IOError incurred when reading '{}'. Will redo. Don't worry. Just chill.".format(img_path))
-            return None
+            pass
     return img
 
 class VideoDataset(Dataset):
@@ -292,18 +293,18 @@ class VideoDataset_inderase(Dataset):
     sample_methods = ['evenly', 'random', 'all']
 
     def __init__(self, dataset, seq_len=15, sample='evenly', transform=None , max_length=40):
-        self.dataset = dataset
-        self.seq_len = seq_len
-        self.sample = sample
-        self.transform = transform
-        self.max_length = max_length
+        self.dataset = dataset # list 8298. 里面三元组 图片路径，pid，camid
+        self.seq_len = seq_len # 4
+        self.sample = sample # 'intelligent'
+        self.transform = transform # [Resize(size=[256, 128], interpolation=bicubic), RandomHorizontalFlip(p=0.5), Pad(padding=10, fill=0, padding_mode=constant), RandomCrop(size=(256, 128), padding=None), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]
+        self.max_length = max_length # 40
         self.erase = RandomErasing3(probability=0.5, mean=[0.485, 0.456, 0.406])
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, index): #__getitem__ 方法通过使对象支持索引操作，使得我们可以按照序列的方式访问自定义类的元素,__是双下划线（__）开头和结尾的函数在Python中被称为"魔法方法"（magic methods）或"特殊方法"（special methods）。这些方法是Python类中的特殊函数，用于定义类的行为，例如初始化、比较、运算符重载等。这些魔法方法会在特定的上下文中被自动调用，而不需要直接调用它们。
-        img_paths, pid, camid = self.dataset[index]
+        img_paths, pid, camid = self.dataset[index] #这里拿到的是随机的一个tracklets。
         num = len(img_paths)
         if self.sample != "intelligent":
             frame_indices = range(num)
@@ -327,31 +328,31 @@ class VideoDataset_inderase(Dataset):
                     indices.append(random.randint(min(i*each , num-1), min( (i+1)*each-1, num-1)) )
                 else:
                     indices.append(random.randint(min(i*each , num-1), num-1) )
-            # print(len(indices), indices, num )
+            # print(len(indices), indices, num ) 以上代码的意思是 例如，如果 self.seq_len 为 4，num（图像数量）为 10，那么生成的索引可能是 [2, 4, 6, 9]，表示从第 2 张图像开始，依次选择连续的 4 张图像作为子序列。 代码是在根据指定的序列长度 self.seq_len 随机生成一组索引。这些索引将用于从图像路径列表中选择对应位置的图像，形成一个子序列
         imgs = []
         labels = []
         targt_cam=[]
         
-        for index in indices:
+        for index in indices: # 便利index，拿到这些index位置的图片
             index=int(index)
             img_path = img_paths[index]
             
             img = read_image(img_path)
 
-            if img is None:
-                # Skip this image and continue with the next one
-                continue
+            # if img is None:
+            #     # Skip this image and continue with the next one
+            #     continue
 
 
             if self.transform is not None:
-                img = self.transform(img)
-            img , temp  = self.erase(img)
+                img = self.transform(img) # 这里已经把图片用归一化等东西 tensro已经是比较小的数，比如-1 0.5之类，同时这里img已经是 tensor 3 256 128
+            img , temp  = self.erase(img) # 对图片进行随机擦除 如果想看擦除，就debug 这里temp 从擦除看是0
             labels.append(temp)
-            img = img.unsqueeze(0)
+            img = img.unsqueeze(0) # 在第0维度加一个维度，变成 1 3 256 128
             imgs.append(img)
             targt_cam.append(camid)
         labels = torch.tensor(labels)
-        imgs = torch.cat(imgs, dim=0)
+        imgs = torch.cat(imgs, dim=0) #通过调用 torch.cat(imgs, dim=0)，你将这些图像张量沿着维度0（即批量维度）进行拼接，得到一个更大的张量。 这里是一个list。里面是各个tensror 1 3 256 128
         
         return imgs, pid, targt_cam ,labels
         

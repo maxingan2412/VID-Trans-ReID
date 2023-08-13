@@ -152,10 +152,15 @@ if __name__ == '__main__':
         "--Dataset_name", default="", help="The name of the DataSet", type=str)
     parser.add_argument(
         "--ViT_path", default="", help="The name of the vit pth", type=str)
+    parser.add_argument(
+        '--epochs', default=120, type=int, help='number of total epochs to run')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     pretrained_path = args.ViT_path
+    epochs = args.epochs
+
+
     torch.manual_seed(1234)
     torch.cuda.manual_seed(1234)
     torch.cuda.manual_seed_all(1234)
@@ -163,7 +168,7 @@ if __name__ == '__main__':
     random.seed(1234)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True    
-    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name)
+    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name) #这里完成了 datloader的组合
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path)
     
     loss_fun,center_criterion= make_loss( num_classes=num_classes)
@@ -175,7 +180,6 @@ if __name__ == '__main__':
 
     #Train
     device = "cuda"
-    epochs = 120
     model=model.to(device)
     ema = ExponentialMovingAverage(model.parameters(), decay=0.995)
     loss_meter = AverageMeter()
@@ -195,14 +199,14 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             optimizer_center.zero_grad()
             
-            img = img.to(device)
-            pid = pid.to(device)
-            target_cam = target_cam.to(device)
+            img = img.to(device) # 32 4 3 256 128
+            pid = pid.to(device) # tensor 32
+            target_cam = target_cam.to(device) # tensor 128 应该对应上面的32*4
             
-            labels2=labels2.to(device)
+            labels2=labels2.to(device) # tensor 32 4
             with amp.autocast(enabled=True):
                 target_cam=target_cam.view(-1)
-                score, feat ,a_vals= model(img, pid, cam_label=target_cam)
+                score, feat ,a_vals= model(img, pid, cam_label=target_cam) #这里是模型的前向传播
                 
                 labels2=labels2.to(device)
                 attn_noise  = a_vals * labels2

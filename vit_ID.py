@@ -204,24 +204,24 @@ class TransReID(nn.Module):
         self.patch_embed = PatchEmbed_overlap(img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,embed_dim=embed_dim)
         num_patches = self.patch_embed.num_patches
 
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        self.Cam = nn.Parameter(torch.zeros(camera, 1, embed_dim))
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim)) #设置可学习的位置编码 1 129 768
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) # 设置可学习的分类标签 1 1 768
+        self.Cam = nn.Parameter(torch.zeros(camera, 1, embed_dim)) # 设置可学习的相机标签 6 1 768
 
-        trunc_normal_(self.Cam, std=.02)
+        trunc_normal_(self.Cam, std=.02) # 这里当做是给cam一个截断的正态分布的初始化 其中标准差为0.02
         self.pos_drop = nn.Dropout(p=drop_rate)
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  #在深度神经网络的训练中，随机深度（stochastic depth）是一种正则化技术，通过在每个训练样本中随机“删除”（跳过）网络中的一些层来增强模型的鲁棒性。在训练过程中，对于每个层，以一定的概率（由 dpr 中的值决定）将其跳过，这样可以模拟网络的一种剪枝（pruning）效果，从而强制模型学习更具鲁棒性的特征。在推理时，所有的层都会被保留。 # stochastic depth decay rule
+        #x.item() 是用于从一个标量（只包含一个元素）的 PyTorch 张量中提取该元素的值的方法。如果张量包含多个元素，则调用 item() 会引发错误，因为它只能用于标量张量。
         self.blocks = nn.ModuleList([
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
-                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
+                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer) #这里的Block就是定义了Transformer中的Block结构
             for i in range(depth)])
 
-        self.norm = norm_layer(embed_dim)
+        self.norm = norm_layer(embed_dim) #LayerNorm((768,), eps=1e-06, elementwise_affine=True)
 
         # Classifier head
-        self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
+        self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity() # 构造一个全连接层，输入是768，输出是num_classes
         trunc_normal_(self.cls_token, std=.02)
         trunc_normal_(self.pos_embed, std=.02)
 
@@ -247,7 +247,7 @@ class TransReID(nn.Module):
         self.num_classes = num_classes
         self.fc = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x, camera_id):
+    def forward_features(self, x, camera_id): #transreid的前向传播
         B = x.shape[0]
        
         x = self.patch_embed(x)
