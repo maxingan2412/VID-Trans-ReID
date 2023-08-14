@@ -6,28 +6,28 @@ from vit_ID import TransReID,Block
 from functools import partial
 from torch.nn import functional as F
 
-
+#明天重点看这个，是怎么混合特征的
 def TCSS(features, shift, b,t):
     #aggregate features at patch level
-    features=features.view(b,features.size(1),t*features.size(2))
-    token = features[:, 0:1]
+    features=features.view(b,features.size(1),t*features.size(2)) # [128,129,768] -->[32,129,3072]
+    token = features[:, 0:1] # [32,1,3072]
 
-    batchsize = features.size(0)
-    dim = features.size(-1)
+    batchsize = features.size(0) # 32
+    dim = features.size(-1) # 3072
     
     
     #shift the patches with amount=shift
-    features= torch.cat([features[:, shift:], features[:, 1:shift]], dim=1)
+    features= torch.cat([features[:, shift:], features[:, 1:shift]], dim=1) # [32,129,3072] --> [32,128,3072]
     
     # Patch Shuffling by 2 part
     try:
-        features = features.view(batchsize, 2, -1, dim)
+        features = features.view(batchsize, 2, -1, dim) # [32,128,3072] --> [32,2,64,3072]
     except:
         features = torch.cat([features, features[:, -2:-1, :]], dim=1)
         features = features.view(batchsize, 2, -1, dim)
     
-    features = torch.transpose(features, 1, 2).contiguous()
-    features = features.view(batchsize, -1, dim)
+    features = torch.transpose(features, 1, 2).contiguous() # [32,2,64,3072] --> [32,64,2,3072] contiguous 方法返回一个在内存中连续存储的版本，这对某些操作是必要的
+    features = features.view(batchsize, -1, dim) # [32,64,2,3072] --> [32,128,3072]
     
     return features,token    
 
@@ -152,26 +152,26 @@ class VID_Trans(nn.Module):
         
         # global branch
         b1_feat = self.b1(features) # [128, 129, 768]
-        global_feat = b1_feat[:, 0]
+        global_feat = b1_feat[:, 0] # [128, 768] 取第一个token
         
-        global_feat=global_feat.unsqueeze(dim=2)
-        global_feat=global_feat.unsqueeze(dim=3)
-        a = F.relu(self.attention_conv(global_feat))
-        a = a.view(b, t, self.middle_dim)
-        a = a.permute(0,2,1)
-        a = F.relu(self.attention_tconv(a))
-        a = a.view(b, t)
+        global_feat=global_feat.unsqueeze(dim=2) # [128, 768, 1] tensor
+        global_feat=global_feat.unsqueeze(dim=3) # [128, 768, 1, 1] tensor
+        a = F.relu(self.attention_conv(global_feat)) # [128, 256, 1, 1] tensor
+        a = a.view(b, t, self.middle_dim) # [32, 4, 256] tensor
+        a = a.permute(0,2,1) # [32, 256, 4] tensor
+        a = F.relu(self.attention_tconv(a)) # [32, 256, 4] ---> [32, 1, 4] tensor
+        a = a.view(b, t) # [32, 1, 4] ---> [32, 4]
         a_vals = a 
         
         a = F.softmax(a, dim=1)
-        x = global_feat.view(b, t, -1)
-        a = torch.unsqueeze(a, -1)
-        a = a.expand(b, t, self.in_planes)
-        att_x = torch.mul(x,a)
-        att_x = torch.sum(att_x,1)
+        x = global_feat.view(b, t, -1) # [128,3,256,128] ---> [32, 4, 768]
+        a = torch.unsqueeze(a, -1) # [32, 4] ---> [32, 4, 1]
+        a = a.expand(b, t, self.in_planes) # [32, 4, 1] ---> [32, 4, 768] 几层括号就是几维的tensor
+        att_x = torch.mul(x,a) # [32, 4, 768]  element-wise multiplication
+        att_x = torch.sum(att_x,1) # [32, 4, 768] ---> [32, 768]  沿着时间维度进行求和
         
-        global_feat = att_x.view(b,self.in_planes)
-        feat = self.bottleneck(global_feat)
+        global_feat = att_x.view(b,self.in_planes) # [32, 768]
+        feat = self.bottleneck(global_feat) #  [32, 768] BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         
 
 
@@ -182,17 +182,17 @@ class VID_Trans(nn.Module):
 
         # video patch patr features
 
-        feature_length = features.size(1) - 1
-        patch_length = feature_length // 4
+        feature_length = features.size(1) - 1 # 129-1=128
+        patch_length = feature_length // 4 # 128/4=32
         
-        #Temporal clip shift and shuffled
-        x ,token=TCSS(features, self.shift_num, b,t)  
+        #Temporal clip shift and shuffled，混合完了  分出去4个头 然后各自有各自的loss
+        x ,token=TCSS(features, self.shift_num, b,t) # [32,4,768] --> [32,128,3072]   [32,1,3072]
         
            
         # part1
-        part1 = x[:, :patch_length]
-        part1 = self.b2(torch.cat((token, part1), dim=1))
-        part1_f = part1[:, 0]
+        part1 = x[:, :patch_length] # [32, 32, 3072]
+        part1 = self.b2(torch.cat((token, part1), dim=1))# [32, 32, 3072] ---> [32, 33, 3072]
+        part1_f = part1[:, 0] # [32, 3072] 取第一个token
 
         # part2
         part2 = x[:, patch_length:patch_length*2]
@@ -210,15 +210,15 @@ class VID_Trans(nn.Module):
         part4_f = part4[:, 0]
        
         
-        
-        part1_bn = self.bottleneck_1(part1_f)
+        #4个头
+        part1_bn = self.bottleneck_1(part1_f) # [32, 3072]
         part2_bn = self.bottleneck_2(part2_f)
         part3_bn = self.bottleneck_3(part3_f)
         part4_bn = self.bottleneck_4(part4_f)
         
-        if self.training:
+        if self.training: # 要搞清楚 到底是一个batch 32意思是32个图片还是 32 个常委4的小视频
             
-            Global_ID = self.classifier(feat)
+            Global_ID = self.classifier(feat) # [32, 768] ---> [32, 625]
             Local_ID1 = self.classifier_1(part1_bn)
             Local_ID2 = self.classifier_2(part2_bn)
             Local_ID3 = self.classifier_3(part3_bn)

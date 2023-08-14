@@ -13,24 +13,24 @@ def make_loss(num_classes):
     triplet = TripletLoss()
     xent = CrossEntropyLabelSmooth(num_classes=num_classes)
         
-
+    #这里定义了各种损失 loss_id ,center= loss_fun(score, feat, pid, target_cam)
     def loss_func(score, feat, target, target_cam):
         if isinstance(score, list):
-                ID_LOSS = [xent(scor, target) for scor in score[1:]]
-                ID_LOSS = sum(ID_LOSS) / len(ID_LOSS)
-                ID_LOSS = 0.25 * ID_LOSS + 0.75 * xent(score[0], target)
+                ID_LOSS = [xent(scor, target) for scor in score[1:]] #  scor tensor 32 625 target tensor 32,这俩是怎么做的损失？--是可以做的  target是pid  [tensor(6.4318, device='cuda:0', grad_fn=<SumBackward0>), tensor(6.4446, device='cuda:0', grad_fn=<SumBackward0>), tensor(6.4400, device='cuda:0', grad_fn=<SumBackward0>), tensor(6.4571, device='cuda:0', grad_fn=<SumBackward0>)]
+                ID_LOSS = sum(ID_LOSS) / len(ID_LOSS) # tensor(6.4434, device='cuda:0', grad_fn=<DivBackward0>)
+                ID_LOSS = 0.25 * ID_LOSS + 0.75 * xent(score[0], target) #tensor(6.4356, device='cuda:0', grad_fn=<AddBackward0>)
         else:
                 ID_LOSS = xent(score, target)
 
         if isinstance(feat, list):
                 TRI_LOSS = [triplet(feats, target)[0] for feats in feat[1:]]
-                TRI_LOSS = sum(TRI_LOSS) / len(TRI_LOSS)
-                TRI_LOSS = 0.25 * TRI_LOSS + 0.75 * triplet(feat[0], target)[0]
+                TRI_LOSS = sum(TRI_LOSS) / len(TRI_LOSS) # tensor(20.4300, device='cuda:0', grad_fn=<DivBackward0>)
+                TRI_LOSS = 0.25 * TRI_LOSS + 0.75 * triplet(feat[0], target)[0] # tensor(7.6633, device='cuda:0', grad_fn=<AddBackward0>)
 
                 center=center_criterion(feat[0], target)
                 centr2 = [center_criterion2(feats, target) for feats in feat[1:]]
                 centr2 = sum(centr2) / len(centr2)
-                center=0.25 *centr2 +  0.75 *  center     
+                center=0.25 *centr2 +  0.75 *  center     # 2400+
         else:
                 TRI_LOSS = triplet(feat, target)[0]
 
