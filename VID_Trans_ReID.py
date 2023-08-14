@@ -202,7 +202,7 @@ if __name__ == '__main__':
             img = img.to(device) # 32 4 3 256 128
             pid = pid.to(device) # tensor 32  tensor([ 78,  78,  78,  78, 260, 260, 260, 260, 159, 159, 159, 159, 441, 441,441, 441, 535, 535, 535, 535,  69,  69,  69,  69, 237, 237, 237, 237,395, 395, 395, 395], device='cuda:0')
             target_cam = target_cam.to(device) # tensor 128 应该对应上面的32*4 从这里推测  每个batch 应该是128个图片，pid是32，也就是每个tracklets 对应的 id，
-            #一个batch 128张图  每4张图是一个tracklets，所以32个tracklets， pid表示的就是这些tracklets的id，因为同一个tracklet的id一样所以只用32就可以表示完成，注意 ppid里面可能有重复 因为不同的tracklets可能有相同的id
+            #一个batch 128张图  每4张图是一个tracklets，所以32个tracklets， pid表示的就是这些tracklets的id，因为同一个tracklet的id一样所以只用32就可以表示完成，注意 pid里面可能有重复 因为不同的tracklets可能有相同的id
             labels2=labels2.to(device) # tensor 32 4
             with amp.autocast(enabled=True):
                 target_cam=target_cam.view(-1)

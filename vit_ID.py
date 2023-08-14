@@ -250,7 +250,7 @@ class TransReID(nn.Module):
     def forward_features(self, x, camera_id): #transreid的前向传播
         B = x.shape[0]
        
-        x = self.patch_embed(x)
+        x = self.patch_embed(x) # [128,3,256,128] -> [128,128,768] 是这样的 转化的第一位是bs所以还是128 不变，最后一位是embed_dim 所以是768，中间的就是patch数量，计算得到 128
         
         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
         x = torch.cat((cls_tokens, x), dim=1)

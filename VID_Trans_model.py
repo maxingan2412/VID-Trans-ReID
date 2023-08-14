@@ -6,8 +6,8 @@ from vit_ID import TransReID,Block
 from functools import partial
 from torch.nn import functional as F
 
-#明天重点看这个，是怎么混合特征的
-def TCSS(features, shift, b,t):
+#明天重点看这个，是怎么混合特征的 x ,token=TCSS(features, self.shift_num, b,t),其实重点就是 View -- transpose -- view 这样实现了混合，我们可以把128 看做是128张图片的特征，混合以后，这128里面就成了俩图片的混合特征，各站64
+def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     #aggregate features at patch level
     features=features.view(b,features.size(1),t*features.size(2)) # [128,129,768] -->[32,129,3072]
     token = features[:, 0:1] # [32,1,3072]
@@ -17,7 +17,7 @@ def TCSS(features, shift, b,t):
     
     
     #shift the patches with amount=shift
-    features= torch.cat([features[:, shift:], features[:, 1:shift]], dim=1) # [32,129,3072] --> [32,128,3072]
+    features= torch.cat([features[:, shift:], features[:, 1:shift]], dim=1) # [32,129,3072] --> [32,128,3072] 把0 也就是附加的token拿掉，然后把 5：128 和 1：5 拼接起来，相当于变了位置 把 5：128 拿到前面了
     
     # Patch Shuffling by 2 part
     try:
@@ -141,18 +141,18 @@ class VID_Trans(nn.Module):
         
 
 
-
+    # model(img, pid, cam_label=target_cam)
     def forward(self, x, label=None, cam_label= None, view_label=None):  # label is unused if self.cos_layer == 'no'
         b=x.size(0) # batch size 32
         t=x.size(1) # seq 4
         # 32 4 3 256 128  ---->  128 3 256 128
-        x=x.view(x.size(0)*x.size(1), x.size(2), x.size(3), x.size(4))
-        features = self.base(x, cam_label=cam_label) # 128 129 768
+        x=x.view(x.size(0)*x.size(1), x.size(2), x.size(3), x.size(4)) #[32,4,3,256,128] --> [128,3,256,128]
+        features = self.base(x, cam_label=cam_label) # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
         
-        
-        # global branch
-        b1_feat = self.b1(features) # [128, 129, 768]
-        global_feat = b1_feat[:, 0] # [128, 768] 取第一个token
+        #其实global的这个attention 它不是一个关于时间或者关于tracklet的attetnion  而是把768这个高维压缩， 得到的[32,4]比如 其中一行一列 表示的是 再第一个tracklet的 t1的特征。 后面用这个特征去加权 正常768这个特征。
+        # global branch gb的attetnion就是论文中的 temporal spatial attention
+        b1_feat = self.b1(features) # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
+        global_feat = b1_feat[:, 0] # [128, 768] 取第一个token 当做global feature
         
         global_feat=global_feat.unsqueeze(dim=2) # [128, 768, 1] tensor
         global_feat=global_feat.unsqueeze(dim=3) # [128, 768, 1, 1] tensor
@@ -163,14 +163,14 @@ class VID_Trans(nn.Module):
         a = a.view(b, t) # [32, 1, 4] ---> [32, 4]
         a_vals = a 
         
-        a = F.softmax(a, dim=1)
-        x = global_feat.view(b, t, -1) # [128,3,256,128] ---> [32, 4, 768]
+        a = F.softmax(a, dim=1) # [32, 4]，dim=1意思就是 再4这个维度上做， 再哪个维度上做，那哪个维度的值加起来等于1，这里就是4个值加起来等于1
+        x = global_feat.view(b, t, -1) # [128,3,256,128] ---> [32, 4, 768]，global_feat[128 768 1 1]   这里不是形状的改变 而是相当于把x改变了一个值，所以相对来说前面x应该换一个名字
         a = torch.unsqueeze(a, -1) # [32, 4] ---> [32, 4, 1]
         a = a.expand(b, t, self.in_planes) # [32, 4, 1] ---> [32, 4, 768] 几层括号就是几维的tensor
         att_x = torch.mul(x,a) # [32, 4, 768]  element-wise multiplication
         att_x = torch.sum(att_x,1) # [32, 4, 768] ---> [32, 768]  沿着时间维度进行求和
         
-        global_feat = att_x.view(b,self.in_planes) # [32, 768]
+        global_feat = att_x.view(b,self.in_planes) # 这里也是 原来 global_feat是[128, 768, 1, 1] tensor，现在直接给变成了[32, 768] tensor，并不是转化呢，而是重新赋值了
         feat = self.bottleneck(global_feat) #  [32, 768] BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         
 
@@ -186,7 +186,7 @@ class VID_Trans(nn.Module):
         patch_length = feature_length // 4 # 128/4=32
         
         #Temporal clip shift and shuffled，混合完了  分出去4个头 然后各自有各自的loss
-        x ,token=TCSS(features, self.shift_num, b,t) # [32,4,768] --> [32,128,3072]   [32,1,3072]
+        x ,token=TCSS(features, self.shift_num, b,t) # [128, 129, 768] ---> [32,128,3072]  [32,1,3072]
         
            
         # part1
@@ -216,7 +216,7 @@ class VID_Trans(nn.Module):
         part3_bn = self.bottleneck_3(part3_f)
         part4_bn = self.bottleneck_4(part4_f)
         
-        if self.training: # 要搞清楚 到底是一个batch 32意思是32个图片还是 32 个常委4的小视频
+        if self.training: # 要搞清楚 到底是一个batch 32意思是32个图片还是 32 个常委4的小视频 ----> 32个视频
             
             Global_ID = self.classifier(feat) # [32, 768] ---> [32, 625]
             Local_ID1 = self.classifier_1(part1_bn)
