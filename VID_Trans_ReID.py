@@ -87,7 +87,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
        
         if use_gpu:
             imgs = imgs.cuda()
-        imgs = Variable(imgs, volatile=True)
+        #imgs = Variable(imgs, volatile=True)
         
         b,  s, c, h, w = imgs.size()
         
@@ -109,7 +109,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
       for batch_idx, (imgs, pids, camids,_) in enumerate(galleryloader):
         if use_gpu:
             imgs = imgs.cuda()
-        imgs = Variable(imgs, volatile=True)
+        #imgs = Variable(imgs, volatile=True)
         b, s,c, h, w = imgs.size()
         features = model(imgs,pids,cam_label=camids)
         features = features.view(b, -1)
@@ -238,7 +238,7 @@ if __name__ == '__main__':
                             .format(epoch, (Epoch_n + 1), len(train_loader),
                                     loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
 
-        if (epoch+1)%10 == 0 :
+        if (epoch+1)%1 == 0 :
                
                model.eval()
                cmc,map = test(model, q_val_set,g_val_set)
@@ -246,7 +246,7 @@ if __name__ == '__main__':
                if cmc_rank1 < cmc:
                   cmc_rank1=cmc
 
-                  save_path = '/VID-Trans-ReID'
+                  save_path = 'VID-Trans-ReID'
                   save_filename = os.path.join(save_path, Dataset_name + 'Main_Model.pth')
                   # 创建目录，如果它不存在
                   if not os.path.exists(save_path):
