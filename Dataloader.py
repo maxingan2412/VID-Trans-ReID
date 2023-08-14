@@ -68,6 +68,7 @@ def dataloader(Dataset_name):
     
 
     dataset = __factory[Dataset_name]() # 这里指向mars数据集，看mars类中是怎么构造出这个数据集的 再这里,获得了datasets类的实例，这个实例就是mars数据集，里面有train，query，gallery等等
+    #VideoDataset_inderase 这个生成了trainset 里面有随机擦除的操作
     train_set = VideoDataset_inderase(dataset.train, seq_len=4, sample='intelligent',transform=train_transforms) #可以认为是把mars数据集中的train部分拿出来，然后用VideoDataset类进行处理，这里是RandomErasing3， 得到train_set
     num_classes = dataset.num_train_pids
     cam_num = dataset.num_train_cams
