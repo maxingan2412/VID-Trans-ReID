@@ -24,13 +24,17 @@ __factory = {
     'iLIDSVID':iLIDSVID,
     'PRID':PRID
 }
-
-def train_collate_fn(batch): #batch 是一个64的list，每个元素是 是一个含有4个元素的tuple，比如 0 是 一个 4 3 256 128 的tensor 1是78 2 是一个 list [4,4,4,4],3 是一个tensor tensor([1, 1, 1, 1])
+#这里定义了 dataloader的打包方式
+def train_collate_fn(batch):# batch list 32   里面是含有4个元素的tuple。 0元素： img tensor 4 3,256,128  1元素：int pid  2元素：list camid 3元素：tensor 4
     
     imgs, pids, camids,a= zip(*batch)
-    pids = torch.tensor(pids, dtype=torch.int64)
+    pids = torch.tensor(pids, dtype=torch.int64) # tensor 32 不重复的pid是8
     
-    camids = torch.tensor(camids, dtype=torch.int64)
+    camids = torch.tensor(camids, dtype=torch.int64) # tensor 32 4
+    imgss = torch.stack(imgs, dim=0) # tensor 32 4 3 256 128
+    ass = torch.stack(a, dim=0) # tensor 32 4
+
+
     return torch.stack(imgs, dim=0), pids, camids, torch.stack(a, dim=0) # imgs tuple64  tensor 4,3,256,128   torch.stack(imgs, dim=0): tensor 64,4,3,256,128
 
 # def val_collate_fn(batch):

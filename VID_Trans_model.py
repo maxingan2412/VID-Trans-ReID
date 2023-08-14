@@ -9,7 +9,7 @@ from torch.nn import functional as F
 #明天重点看这个，是怎么混合特征的 x ,token=TCSS(features, self.shift_num, b,t),其实重点就是 View -- transpose -- view 这样实现了混合，我们可以把128 看做是128张图片的特征，混合以后，这128里面就成了俩图片的混合特征，各站64
 def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     #aggregate features at patch level
-    features=features.view(b,features.size(1),t*features.size(2)) # [128,129,768] -->[32,129,3072]
+    features=features.view(b,features.size(1),t*features.size(2)) # [128,129,768] -->[32,129,3072] 变化之后，我们把这个fp理解成32行的特征，每一行都是一个tracklets的特征 一共32个tracklets 重要：！！！弄成32的目的是为了保证下面的变化不会影响id的变化 之后的操作维度不再这个上面，所以id不收影响
     token = features[:, 0:1] # [32,1,3072]
 
     batchsize = features.size(0) # 32
@@ -28,7 +28,7 @@ def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     
     features = torch.transpose(features, 1, 2).contiguous() # [32,2,64,3072] --> [32,64,2,3072] contiguous 方法返回一个在内存中连续存储的版本，这对某些操作是必要的
     features = features.view(batchsize, -1, dim) # [32,64,2,3072] --> [32,128,3072]
-    
+     # 以上的操作其实就是让patch混合，比如这128个 patch feature 原来是 1 2 3 。。。 128 现在这样混合就成了 1 65 2 66 3 67 。。。 64 128
     return features,token    
 
 def weights_init_kaiming(m):
@@ -161,7 +161,7 @@ class VID_Trans(nn.Module):
         a = a.permute(0,2,1) # [32, 256, 4] tensor
         a = F.relu(self.attention_tconv(a)) # [32, 256, 4] ---> [32, 1, 4] tensor
         a = a.view(b, t) # [32, 1, 4] ---> [32, 4]
-        a_vals = a 
+        a_vals = a # 这个东西看做是 temporal spatial attention的权重，
         
         a = F.softmax(a, dim=1) # [32, 4]，dim=1意思就是 再4这个维度上做， 再哪个维度上做，那哪个维度的值加起来等于1，这里就是4个值加起来等于1
         x = global_feat.view(b, t, -1) # [128,3,256,128] ---> [32, 4, 768]，global_feat[128 768 1 1]   这里不是形状的改变 而是相当于把x改变了一个值，所以相对来说前面x应该换一个名字
@@ -223,7 +223,7 @@ class VID_Trans(nn.Module):
             Local_ID2 = self.classifier_2(part2_bn)
             Local_ID3 = self.classifier_3(part3_bn)
             Local_ID4 = self.classifier_4(part4_bn)
-                
+             #loss_id ,center
             return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals #[global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals 
         
         else:

@@ -171,7 +171,7 @@ if __name__ == '__main__':
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name) #这里完成了 datloader的组合
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path)
     #这里似乎都还没有实例化，是for循环才开始有各种值的
-    loss_fun,center_criterion= make_loss( num_classes=num_classes) # return   ID_LOSS+ TRI_LOSS, center
+    loss_fun,center_criterion= make_loss( num_classes=num_classes) # return   loss_func,center_criterion
     optimizer_center = torch.optim.SGD(center_criterion.parameters(), lr= 0.5)
     
     optimizer= optimizer( model)
@@ -195,7 +195,7 @@ if __name__ == '__main__':
         model.train()
         #还是高搞清楚train_loader的数据结构，这里的train_loader是一个list，长度是epoch的长度，每个元素是一个list，长度是batch的长度，每个元素是一个tuple，长度是4，分别是img，pid，camid，target_cam
         for Epoch_n, (img, pid, target_cam,labels2) in enumerate(train_loader):
-            
+            #labels2 是噪声注入的标记，代表每张照片是否注入噪声,但还是没找着注入的地方
             optimizer.zero_grad()
             optimizer_center.zero_grad()
             
@@ -211,7 +211,7 @@ if __name__ == '__main__':
                 labels2=labels2.to(device)
                 attn_noise  = a_vals * labels2 # 俩都是 32 4，
                 attn_loss = attn_noise.sum(1).mean() #是一个值了 tensor(1.3899, device='cuda:0', grad_fn=<MeanBackward0>)
-                
+                # ID_LOSS+ TRI_LOSS, center
                 loss_id ,center= loss_fun(score, feat, pid, target_cam) # 14 2000+
                 loss=loss_id+ 0.0005*center +attn_loss
             scaler.scale(loss).backward() #这里是反向传播

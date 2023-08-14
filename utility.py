@@ -22,7 +22,7 @@ class RandomIdentitySampler(Sampler):
         self.data_source = data_source
         self.batch_size = batch_size
         self.num_instances = num_instances
-        self.num_pids_per_batch = self.batch_size // self.num_instances # bs 32 ni 4  所以结果是8，也就是说在每个tracklet中选4张，因为bs是32，所以每个batch中有8个tracklet，也就是8个pid
+        self.num_pids_per_batch = self.batch_size // self.num_instances # bs 32 ni 4  结果是8  所以 一个batch里8个pid，32个tracklets 128张图片
         self.index_dic = defaultdict(list) #dict with list value
         #{783: [0, 5, 116, 876, 1554, 2041],...,}
         for index, (_, pid, _) in enumerate(self.data_source):
