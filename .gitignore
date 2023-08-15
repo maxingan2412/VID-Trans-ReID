@@ -6,3 +6,4 @@ data/
 
 # 忽略名为 data.txt 的文件
 #data.txt
+/data/
