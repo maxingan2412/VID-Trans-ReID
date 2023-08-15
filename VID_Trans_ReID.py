@@ -238,7 +238,7 @@ if __name__ == '__main__':
                             .format(epoch, (Epoch_n + 1), len(train_loader),
                                     loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
 
-        if (epoch+1)%1 == 0 :
+        if (epoch+1)%30 == 0 :
                
                model.eval()
                cmc,map = test(model, q_val_set,g_val_set)
