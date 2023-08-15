@@ -82,3 +82,8 @@ If you are making use of this work in any way, you must please reference the fol
 
 
 python -u VID_Test.py --Dataset_name 'Mars' --model_path 'Transformer.pth'
+
+
+aug15 
+训练 
+./experiment.sh python -u VID_Trans_ReID.py --Dataset_name 'Mars' --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth'
