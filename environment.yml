@@ -55,5 +55,5 @@ dependencies:
       - urllib3==2.0.4
       - yacs==0.1.8
       - zipp==3.15.0
-#prefix: /home/ma1/anaconda3/envs/VID-Trans-ReID
+#prefix: /home/ma1/anaconda3/envs/VIDtest
 prefix: /media/data2/ma1/anaconda3/envs/VID-Trans-ReID
