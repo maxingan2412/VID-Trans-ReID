@@ -44,7 +44,7 @@ def train_collate_fn(batch):# batch list 32   里面是含有4个元素的tuple�
 #     camids_batch = torch.tensor(camids, dtype=torch.int64)
 #     return torch.stack(imgs, dim=0), pids, camids_batch,  img_paths
 
-def dataloader(Dataset_name):
+def dataloader(Dataset_name,batchsize):
     train_transforms = T.Compose([
             T.Resize([256, 128], interpolation=3),
             T.RandomHorizontalFlip(p=0.5),
@@ -75,7 +75,7 @@ def dataloader(Dataset_name):
     view_num = dataset.num_train_vids
 
    # 这里该bs
-    train_loader = DataLoader(train_set, batch_size=32,sampler=RandomIdentitySampler(dataset.train, 32,4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
+    train_loader = DataLoader(train_set, batch_size=batchsize,sampler=RandomIdentitySampler(dataset.train, batchsize,4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
   #暂时就认为上面的一些东西 让我们构建了dataloader。dataloader很多的构建方式是让每一个batch的数据比较平衡，比如bs32 seq4，我们就让一个batch里面有8个id，每个id有4个seq
     q_val_set = VideoDataset(dataset.query, seq_len=4, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset.gallery, seq_len=4, sample='dense', transform=val_transforms)

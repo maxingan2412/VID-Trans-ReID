@@ -151,13 +151,16 @@ if __name__ == '__main__':
         "--Dataset_name", default="", help="The name of the DataSet", type=str)
     parser.add_argument(
         "--model_path", default="", help="pretrained model", type=str)
+    parser.add_argument(
+        '--batch size', default=32, type=int, help='batch size of train')
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     pretrainpath=args.model_path
+    batch_size=args.batch_size
 
 
 
-    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name)
+    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size)
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth')
 
     device = "cuda"

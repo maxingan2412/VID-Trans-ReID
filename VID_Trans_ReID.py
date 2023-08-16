@@ -154,11 +154,14 @@ if __name__ == '__main__':
         "--ViT_path", default="", help="The name of the vit pth", type=str)
     parser.add_argument(
         '--epochs', default=120, type=int, help='number of total epochs to run')
+    parser.add_argument(
+        '--batch size', default=32, type=int, help='batch size of train')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     pretrained_path = args.ViT_path
     epochs = args.epochs
+    batch_size = args.batch_size
 
 
     torch.manual_seed(1234)
@@ -168,7 +171,7 @@ if __name__ == '__main__':
     random.seed(1234)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True    
-    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name) #这里完成了 datloader的组合
+    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size) #这里完成了 datloader的组合
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path)
     #这里似乎都还没有实例化，是for循环才开始有各种值的
     loss_fun,center_criterion= make_loss( num_classes=num_classes) # return   loss_func,center_criterion
