@@ -1,0 +1,32 @@
+apt update
+apt install wget
+apt install git
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+source ~/.bashrc
+conda create -n vit python=3.7
+conda activate vit
+pip install torch==1.8.0+cu111 torchvision==0.9.0+cu111 torchaudio==0.8.0 -f https://download.pytorch.org/whl/torch_stable.html
+cd /home/ma1/
+mkdir work
+cd work
+git clone https://github.com/maxingan2412/VID-Trans-ReID.git
+cd VID-Trans-ReID
+pip install -r requirements.txt
+pip install matplotlib
+pip install scipy
+
+
+
+enroot start -r -w -m /home/ma1/work/data:/home/ma1/work/data vitcontainer
+cd /home/ma1/work/VID-Trans-ReID
+wget https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-vitjx/jx_vit_base_p16_224-80ecf9dd.pth
+wget https://durhamuniversity-my.sharepoint.com/:u:/g/personal/zwjx97_durham_ac_uk/Ec09LVNFG_JKotjNPkVgTaIB7k0eUAwmPq9gawciw2ggBQ?e=swd9DK
+
+
+
+scancel <job-id>
+
+您想取消所有您的作业
+scancel -u <your-username>

@@ -3,3 +3,6 @@ torchvision
 timm
 yacs
 opencv-python
+matplotlib
+scipy
+torch-ema
