@@ -158,6 +158,10 @@ if __name__ == '__main__':
     pretrainpath=args.model_path
     batch_size=args.batch_size
 
+    print("Arguments:")
+    for arg in vars(args):
+        print(f"{arg}: {getattr(args, arg)}")
+
 
 
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size)

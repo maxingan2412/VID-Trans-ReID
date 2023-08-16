@@ -163,6 +163,10 @@ if __name__ == '__main__':
     epochs = args.epochs
     batch_size = args.batch_size
 
+    print("Arguments:")
+    for arg in vars(args):
+        print(f"{arg}: {getattr(args, arg)}")
+
 
     torch.manual_seed(1234)
     torch.cuda.manual_seed(1234)
