@@ -152,7 +152,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--model_path", default="", help="pretrained model", type=str)
     parser.add_argument(
-        '--batch size', default=32, type=int, help='batch size of train')
+        '--batch_size', default=32, type=int, help='batch size of train')
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     pretrainpath=args.model_path

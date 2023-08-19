@@ -78,7 +78,7 @@ def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=21):
     mAP = np.mean(all_AP)
 
     return all_cmc, mAP
-
+#性能问题应该发生在这里面。 test里面
 def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 5, 10, 20]):
     model.eval()
     qf, q_pids, q_camids = [], [], []
@@ -155,7 +155,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--epochs', default=120, type=int, help='number of total epochs to run')
     parser.add_argument(
-        '--batch size', default=32, type=int, help='batch size of train')
+        '--batch_size', default=32, type=int, help='batch size of train')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     loss_fun,center_criterion= make_loss( num_classes=num_classes) # return   loss_func,center_criterion
     optimizer_center = torch.optim.SGD(center_criterion.parameters(), lr= 0.5)
     
-    optimizer= optimizer( model)
+    optimizer= optimizer(model)
     scheduler = scheduler(optimizer)
     scaler = amp.GradScaler()
 
@@ -213,6 +213,7 @@ if __name__ == '__main__':
             labels2=labels2.to(device) # tensor 32 4
             with amp.autocast(enabled=True):
                 target_cam=target_cam.view(-1)
+                # [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
                 score, feat ,a_vals= model(img, pid, cam_label=target_cam) #这里是模型的前向传播 score是一个list 长度是5，元素是 glbaol和local的特征 维度是 32 625
                 
                 labels2=labels2.to(device)
@@ -226,11 +227,14 @@ if __name__ == '__main__':
             scaler.step(optimizer) # 用计算出的梯度来更新模型的参数。但在实际更新参数之前，GradScaler会首先检查这些梯度是否存在不稳定的情况（例如太大或太小）。如果存在不稳定的情况，它会跳过参数更新，并调整尺度因子以防止将来再次出现这种情况。如果梯度稳定，它会将梯度除以尺度因子并执行参数更新。
             scaler.update() # 更新缩放因子。基于过去几步中梯度的稳定性来动态调整尺度因子。
             ema.update() #这不是混合精度训练的一部分，看起来像是对指数移动平均（Exponential Moving Average, EMA）的更新。EMA通常用于平滑模型参数的变化，使模型在训练的后期阶段更加稳定。
-            
+
+            #我们不但在前面更新了模型参数，这里还更新了center_criterion的参数，是的，CenterLoss中包含可学习参数。
             for param in center_criterion.parameters(): # parameters 625 768
                     param.grad.data *= (1. / 0.0005) #对每个参数的梯度进行缩放。具体来说，它将每个参数的梯度乘以1. / 0.0005，也就是乘以2000。这是梯度重加权的一种策略，可能用于调整特定损失函数对整体参数更新的影响。
             scaler.step(optimizer_center) #使用给定的optimizer_center（一个优化器实例）来更新模型的参数。之前的scaler.scale(loss).backward()代码（从之前的问题中看到）计算了模型的梯度。
             scaler.update() # 更新GradScaler的缩放因子，这是混合精度训练的一部分。
+
+
             if isinstance(score, list):
                 acc = (score[0].max(1)[1] == pid).float().mean() #score[0].max(1)[1]取列表中的第一个元素并找出每行的最大值的索引。然后，这些索引与pid进行比较，结果是一个布尔张量。通过将其转化为浮点数并计算其均值，我们得到了准确率。
             else:

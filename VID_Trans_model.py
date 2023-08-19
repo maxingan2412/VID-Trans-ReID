@@ -7,16 +7,18 @@ from functools import partial
 from torch.nn import functional as F
 
 #明天重点看这个，是怎么混合特征的 x ,token=TCSS(features, self.shift_num, b,t),其实重点就是 View -- transpose -- view 这样实现了混合，我们可以把128 看做是128张图片的特征，混合以后，这128里面就成了俩图片的混合特征，各站64
+#818 不仅仅是混合 而且是把 patch4和1， 从[128,129,768] -->[32,129,3072]
 def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     #aggregate features at patch level
-    features=features.view(b,features.size(1),t*features.size(2)) # [128,129,768] -->[32,129,3072] 变化之后，我们把这个fp理解成32行的特征，每一行都是一个tracklets的特征 一共32个tracklets 重要：！！！弄成32的目的是为了保证下面的变化不会影响id的变化 之后的操作维度不再这个上面，所以id不收影响
+    #819 这步可以理解为原来代表的是 128patch的特征，现在这个128代表了 128个融合了的特征，也就是说 这步融合了patch，如果我们还把128看做是patch上的特征，那么这个特征就是融合了的特征
+    features=features.view(b,features.size(1),t*features.size(2))   # [128,129,768] -->[32,129,3072]
     token = features[:, 0:1] # [32,1,3072]
 
     batchsize = features.size(0) # 32
     dim = features.size(-1) # 3072
     
     
-    #shift the patches with amount=shift
+    #shift the patches with amount=shift 混合了patches的顺序,重新排列了patch
     features= torch.cat([features[:, shift:], features[:, 1:shift]], dim=1) # [32,129,3072] --> [32,128,3072] 把0 也就是附加的token拿掉，然后把 5：128 和 1：5 拼接起来，相当于变了位置 把 5：128 拿到前面了
     
     # Patch Shuffling by 2 part
@@ -99,7 +101,7 @@ class VID_Trans(nn.Module):
        
         self.b2 = nn.Sequential(
             self.block1,
-            nn.LayerNorm(3072)#copy.deepcopy(layer_norm)
+            nn.LayerNorm(3072) #copy.deepcopy(layer_norm)
         )
         
         
@@ -180,18 +182,18 @@ class VID_Trans(nn.Module):
         #-------------------------------------------------
 
 
-        # video patch patr features
+        # video patch patr features   所以说，网络本身又两种 blcok一种输入是 768 一种是 3072 似乎block只看dim 形状不管
 
         feature_length = features.size(1) - 1 # 129-1=128
         patch_length = feature_length // 4 # 128/4=32
         
         #Temporal clip shift and shuffled，混合完了  分出去4个头 然后各自有各自的loss
-        x ,token=TCSS(features, self.shift_num, b,t) # [128, 129, 768] ---> [32,128,3072]  [32,1,3072]
+        x ,token=TCSS(features, self.shift_num, b,t) # [128, 129, 768] ---> [32,128,3072]  [32,1,3072] 这个token 应该和上面global_feat [128, 768] 是一个东西 也就是说下面拿到的4个part也都混合了 global的特征
         
            
         # part1
-        part1 = x[:, :patch_length] # [32, 32, 3072]
-        part1 = self.b2(torch.cat((token, part1), dim=1))# [32, 32, 3072] ---> [32, 33, 3072]
+        part1 = x[:, :patch_length] # [32, 32, 3072] 似乎
+        part1 = self.b2(torch.cat((token, part1), dim=1))# [32, 32, 3072] ---> [32, 33, 3072]  这里是先concat 然后经过了一个block+ layer norm 也就是又混合了一词特征 才去的第一个token
         part1_f = part1[:, 0] # [32, 3072] 取第一个token
 
         # part2
@@ -219,10 +221,10 @@ class VID_Trans(nn.Module):
         if self.training: # 要搞清楚 到底是一个batch 32意思是32个图片还是 32 个常委4的小视频 ----> 32个视频
             
             Global_ID = self.classifier(feat) # [32, 768] ---> [32, 625]
-            Local_ID1 = self.classifier_1(part1_bn)
-            Local_ID2 = self.classifier_2(part2_bn)
-            Local_ID3 = self.classifier_3(part3_bn)
-            Local_ID4 = self.classifier_4(part4_bn)
+            Local_ID1 = self.classifier_1(part1_bn) # [32, 3072] ---> [32, 625]
+            Local_ID2 = self.classifier_2(part2_bn) # [32, 3072] ---> [32, 625]
+            Local_ID3 = self.classifier_3(part3_bn) # [32, 3072] ---> [32, 625]
+            Local_ID4 = self.classifier_4(part4_bn) # [32, 3072] ---> [32, 625]
              #loss_id ,center
             return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals #[global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals 
         
