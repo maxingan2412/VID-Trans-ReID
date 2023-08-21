@@ -30,3 +30,22 @@ scancel <job-id>
 
 您想取消所有您的作业
 scancel -u <your-username>
+
+squeue
+      shows the information in list format regarding how many jobs are being run and by whom (user ids)
+
+ 3. scontrol show job <job number in int>
+      e.g. scontrol show job 114
+      shows the details of the running job and how much resources are being used. Job number can be obtained from squeue command
+
+
+ 4. sinfo
+      lists the state of the available and busy gpus
+
+
+
+ 5. sbatch <job_script.sh>
+      submits the job to the job scheduler. This is the way to submit jobs to the cluster.
+
+
+ 6. Data to the cluster home directory can be directly downloaded or copied with 'rsync' command.

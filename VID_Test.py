@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import os
 import argparse
+from tqdm import tqdm
 
 import logging
 import os
@@ -82,7 +83,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
     model.eval()
     qf, q_pids, q_camids = [], [], []
     with torch.no_grad():
-      for batch_idx, (imgs, pids, camids,_) in enumerate(queryloader):
+      for batch_idx, (imgs, pids, camids,_) in enumerate(tqdm(queryloader)): #1980
 
         if use_gpu:
             imgs = imgs.cuda()
@@ -105,7 +106,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
       q_camids = np.asarray(q_camids)
       print("Extracted features for query set, obtained {}-by-{} matrix".format(qf.size(0), qf.size(1)))
       gf, g_pids, g_camids = [], [], []
-      for batch_idx, (imgs, pids, camids,_) in enumerate(galleryloader):
+      for batch_idx, (imgs, pids, camids,_) in enumerate(tqdm(galleryloader)): #9330
         if use_gpu:
             imgs = imgs.cuda()
         #imgs = Variable(imgs, volatile=True)
@@ -126,7 +127,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
     print("Extracted features for gallery set, obtained {}-by-{} matrix".format(gf.size(0), gf.size(1)))
     print("Computing distance matrix")
     m, n = qf.size(0), gf.size(0)
-    distmat = torch.pow(qf, 2).sum(dim=1, keepdim=True).expand(m, n) +               torch.pow(gf, 2).sum(dim=1, keepdim=True).expand(n, m).t()
+    distmat = torch.pow(qf, 2).sum(dim=1, keepdim=True).expand(m, n) + torch.pow(gf, 2).sum(dim=1, keepdim=True).expand(n, m).t()
     distmat.addmm_(1, -2, qf, gf.t())
     distmat = distmat.numpy()
     gf = gf.numpy()

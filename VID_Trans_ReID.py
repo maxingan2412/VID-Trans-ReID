@@ -21,7 +21,8 @@ import torch.distributed as dist
 
 from utility import AverageMeter, optimizer,scheduler
 
-
+import os
+from datetime import datetime
 
    
         
@@ -257,13 +258,31 @@ if __name__ == '__main__':
                if cmc_rank1 < cmc:
                   cmc_rank1=cmc
 
-                  save_path = 'VID-Trans-ReID'
-                  save_filename = os.path.join(save_path, Dataset_name + 'Main_Model.pth')
+                  save_path = 'VID-Trans-ReID_pth'
+                  Dataset_name = args.Dataset_name
+                  Batch_size = args.Batch_size
+                  current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                  file_name = f"{Dataset_name}_Main_Model_Batch{Batch_size}_{current_time}.pth"
+                  save_filename = os.path.join(save_path, file_name)
+
                   # 创建目录，如果它不存在
                   if not os.path.exists(save_path):
                       os.makedirs(save_path)
 
                   torch.save(model.state_dict(), save_filename)
+
+
+
+               # if cmc_rank1 < cmc:
+               #    cmc_rank1=cmc
+               #
+               #    save_path = 'VID-Trans-ReID'
+               #    save_filename = os.path.join(save_path, Dataset_name + 'Main_Model.pth')
+               #    # 创建目录，如果它不存在
+               #    if not os.path.exists(save_path):
+               #        os.makedirs(save_path)
+               #
+               #    torch.save(model.state_dict(), save_filename)
 
                   #torch.save(model.state_dict(),os.path.join('/VID-Trans-ReID',  Dataset_name+'Main_Model.pth'))
         
