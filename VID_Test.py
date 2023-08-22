@@ -13,8 +13,9 @@ from tqdm import tqdm
 import logging
 import os
 import time
-import torch
 import torch.nn as nn
+import torch
+import torch.autograd.profiler as profiler
 
 from torch.cuda import amp
 from utility import AverageMeter, optimizer,scheduler
@@ -83,10 +84,11 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
     model.eval()
     qf, q_pids, q_camids = [], [], []
     with torch.no_grad():
+      #with profiler.profile(record_shapes=True, profile_memory=True, use_cuda=True) as prof:
       for batch_idx, (imgs, pids, camids,_) in enumerate(tqdm(queryloader)): #1980
 
         if use_gpu:
-            imgs = imgs.cuda()
+            imgs = imgs.cuda(non_blocking=True)
         #imgs = Variable(imgs, volatile=True)
 
         b,  s, c, h, w = imgs.size()
@@ -101,6 +103,9 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
 
         q_pids.append(pids)
         q_camids.extend(camids)
+
+      #print(prof.key_averages().table(sort_by="self_cpu_time_total"))
+
       qf = torch.stack(qf)
       q_pids = np.asarray(q_pids)
       q_camids = np.asarray(q_camids)
@@ -108,7 +113,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
       gf, g_pids, g_camids = [], [], []
       for batch_idx, (imgs, pids, camids,_) in enumerate(tqdm(galleryloader)): #9330
         if use_gpu:
-            imgs = imgs.cuda()
+            imgs = imgs.cuda(non_blocking=True)
         #imgs = Variable(imgs, volatile=True)
         b, s,c, h, w = imgs.size()
         features = model(imgs,pids,cam_label=camids)

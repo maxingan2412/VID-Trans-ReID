@@ -157,12 +157,16 @@ if __name__ == '__main__':
         '--epochs', default=120, type=int, help='number of total epochs to run')
     parser.add_argument(
         '--batch_size', default=32, type=int, help='batch size of train')
+    parser.add_argument(
+        '--test_epoches', default=30, type=int, help='e.g if setting to 30 means we test the model every 30 epoches')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     pretrained_path = args.ViT_path
     epochs = args.epochs
     batch_size = args.batch_size
+    test_epoches = args.test_epoches
+
 
     print("Arguments:")
     for arg in vars(args):
@@ -194,6 +198,7 @@ if __name__ == '__main__':
     acc_meter = AverageMeter()
     
     cmc_rank1=0
+    acc = 0
     for epoch in range(1, epochs + 1):
         start_time = time.time()
         loss_meter.reset()
@@ -250,7 +255,7 @@ if __name__ == '__main__':
                             .format(epoch, (Epoch_n + 1), len(train_loader),
                                     loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
 
-        if (epoch+1)%30 == 0 :
+        if (epoch+1)%test_epoches == 0 :
                
                model.eval()
                cmc,map = test(model, q_val_set,g_val_set)
