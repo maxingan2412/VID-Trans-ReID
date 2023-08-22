@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=vit128
+#SBATCH --job-name=vit64
 #SBATCH --time=72:00:00
 #SBATCH --gpus=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=8
 #SBATCH --output=out/diff_train-%j.out
 #SBATCH --error=out/diff_train-%j.err
 
@@ -40,12 +40,14 @@ function execute_and_log {
 }
 
 # 执行命令
-echo "setting : bs 32 epoch 240" >> "$LOG_FILE"
+echo "setting : bs 64 epoch 240" >> "$LOG_FILE"
 
 execute_and_log "nvidia-smi"
-execute_and_log "/home/ma1/anaconda3/envs/vid/bin/python -u VID_Trans_ReID.py --Dataset_name 'Mars' --test_epoches 80 --batch_size 128 --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth' --epochs 240"
+execute_and_log "/home/ma1/anaconda3/envs/vid/bin/python -u VID_Trans_ReID.py --Dataset_name 'Mars' --test_epoches 80 --batch_size 64 --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth' --epochs 240"
+# 在后台运行 nvidia-smi 命令并将输出重定向到日志文件
+#(sleep 180 && nvidia-smi) >> "$LOG_FILE" 2>&1 &
+
 
 # 记录结束时间
 echo "Experiment ended at $(date +"%Y-%m-%d %H:%M:%S")" >> "$LOG_FILE"
-# 在后台运行 nvidia-smi 命令并将输出重定向到日志文件
-(sleep 600 && nvidia-smi) >> "$LOG_FILE" 2>&1 &
+

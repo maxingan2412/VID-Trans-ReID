@@ -93,7 +93,6 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
 
         b,  s, c, h, w = imgs.size()
 
-
         features = model(imgs,pids,cam_label=camids )
 
         features = features.view(b, -1)

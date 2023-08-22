@@ -23,7 +23,7 @@ from utility import AverageMeter, optimizer,scheduler
 
 import os
 from datetime import datetime
-
+from tqdm import tqdm
    
         
 
@@ -84,7 +84,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
     model.eval()
     qf, q_pids, q_camids = [], [], []
     with torch.no_grad():
-      for batch_idx, (imgs, pids, camids,_) in enumerate(queryloader):
+      for batch_idx, (imgs, pids, camids,_) in enumerate(tqdm(queryloader)):
        
         if use_gpu:
             imgs = imgs.cuda()
@@ -107,7 +107,7 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True, ranks=[1, 
       q_camids = np.asarray(q_camids)
       print("Extracted features for query set, obtained {}-by-{} matrix".format(qf.size(0), qf.size(1)))
       gf, g_pids, g_camids = [], [], []
-      for batch_idx, (imgs, pids, camids,_) in enumerate(galleryloader):
+      for batch_idx, (imgs, pids, camids,_) in enumerate(tqdm(galleryloader)):
         if use_gpu:
             imgs = imgs.cuda()
         #imgs = Variable(imgs, volatile=True)
@@ -207,7 +207,7 @@ if __name__ == '__main__':
         scheduler.step(epoch)
         model.train()
         #还是高搞清楚train_loader的数据结构，这里的train_loader是一个list，长度是epoch的长度，每个元素是一个list，长度是batch的长度，每个元素是一个tuple，长度是4，分别是img，pid，camid，target_cam
-        for Epoch_n, (img, pid, target_cam,labels2) in enumerate(train_loader):
+        for Epoch_n, (img, pid, target_cam,labels2) in enumerate(tqdm(train_loader)):
             #labels2 是噪声注入的标记，代表每张照片是否注入噪声,但还是没找着注入的地方
             optimizer.zero_grad()
             optimizer_center.zero_grad()
@@ -250,7 +250,7 @@ if __name__ == '__main__':
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize() # 这是一个CUDA操作同步指令。当你执行一个CUDA操作时，例如GPU上的张量操作，它通常是异步的。这意味着CPU代码会继续执行，而不等待GPU操作完成。这条指令会使CPU等待直到所有CUDA流中的任务都完成。在性能分析、时间测量或确保特定操作前后的数据一致性时，这很有用
-            if (Epoch_n + 1) % 50 == 0:
+            if (Epoch_n + 1) % 50 == 0: #822 train_loader bs越大 这个就越小，比如 bs128的时候从log中看出这个是59，64的时候是118
                 print("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, Acc: {:.3f}, Base Lr: {:.2e}"
                             .format(epoch, (Epoch_n + 1), len(train_loader),
                                     loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
@@ -276,19 +276,5 @@ if __name__ == '__main__':
 
                   torch.save(model.state_dict(), save_filename)
 
-
-
-               # if cmc_rank1 < cmc:
-               #    cmc_rank1=cmc
-               #
-               #    save_path = 'VID-Trans-ReID'
-               #    save_filename = os.path.join(save_path, Dataset_name + 'Main_Model.pth')
-               #    # 创建目录，如果它不存在
-               #    if not os.path.exists(save_path):
-               #        os.makedirs(save_path)
-               #
-               #    torch.save(model.state_dict(), save_filename)
-
-                  #torch.save(model.state_dict(),os.path.join('/VID-Trans-ReID',  Dataset_name+'Main_Model.pth'))
         
      
