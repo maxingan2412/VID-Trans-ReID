@@ -16,6 +16,7 @@ from utility import RandomIdentitySampler,RandomErasing3
 from Datasets.MARS_dataset import Mars
 from Datasets.iLDSVID import iLIDSVID
 from Datasets.PRID_dataset import PRID
+from torch.nn.utils.rnn import pad_sequence
 
 import os
 
@@ -34,8 +35,22 @@ def train_collate_fn(batch):# batch list 32   里面是含有4个元素的tuple�
     imgss = torch.stack(imgs, dim=0) # tensor 32 4 3 256 128
     ass = torch.stack(a, dim=0) # tensor 32 4
 
-
     return torch.stack(imgs, dim=0), pids, camids, torch.stack(a, dim=0) # imgs tuple64  tensor 4,3,256,128   torch.stack(imgs, dim=0): tensor 64,4,3,256,128
+
+
+def custom_collate_fn(batch):
+    imgs, pids, camids, a = zip(*batch)
+    pids = torch.tensor(pids, dtype=torch.int64)
+    camids_padded = pad_sequence([torch.tensor(camid, dtype=torch.int64) for camid in camids], batch_first=True,
+                                 padding_value=-1)
+
+    # Convert each element in 'a' to a tensor and stack them
+    a_tensors = [torch.tensor(item, dtype=torch.float32) for item in a]
+    ass = torch.stack(a_tensors, dim=0)
+
+    return torch.stack(imgs, dim=0), pids, camids_padded, ass
+
+
 
 # def val_collate_fn(batch):
 #
@@ -79,6 +94,9 @@ def dataloader(Dataset_name,batchsize):
   #暂时就认为上面的一些东西 让我们构建了dataloader。dataloader很多的构建方式是让每一个batch的数据比较平衡，比如bs32 seq4，我们就让一个batch里面有8个id，每个id有4个seq
     q_val_set = VideoDataset(dataset.query, seq_len=4, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset.gallery, seq_len=4, sample='dense', transform=val_transforms)
+
+    # q_val_set = DataLoader(q_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
+    # g_val_set = DataLoader(g_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
     
     
     return train_loader, len(dataset.query), num_classes, cam_num, view_num,q_val_set,g_val_set
