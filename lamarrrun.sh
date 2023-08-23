@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=vit64
+#SBATCH --job-name=vit156
 #SBATCH --time=72:00:00
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=8
@@ -39,15 +39,13 @@ function execute_and_log {
     done | tee -ai "$LOG_FILE"
 }
 
-# 执行命令
-echo "setting : bs 64 epoch 240" >> "$LOG_FILE"
-
-execute_and_log "nvidia-smi"
-execute_and_log "/home/ma1/anaconda3/envs/vid/bin/python -u VID_Trans_ReID.py --Dataset_name 'Mars' --test_epoches 80 --batch_size 64 --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth' --epochs 240"
 # 在后台运行 nvidia-smi 命令并将输出重定向到日志文件
-#(sleep 180 && nvidia-smi) >> "$LOG_FILE" 2>&1 &
+(sleep 300 && nvidia-smi) >> "$LOG_FILE" 2>&1 &
 
+# 执行命令
+echo "setting : bs 156 epoch 240" >> "$LOG_FILE"
+execute_and_log "nvidia-smi"
+execute_and_log "/home/ma1/anaconda3/envs/vid/bin/python -u VID_Trans_ReID.py --Dataset_name 'Mars' --test_epoches 80 --batch_size 156 --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth' --epochs 240"
 
 # 记录结束时间
 echo "Experiment ended at $(date +"%Y-%m-%d %H:%M:%S")" >> "$LOG_FILE"
-
