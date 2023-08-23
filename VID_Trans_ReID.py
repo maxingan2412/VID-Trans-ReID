@@ -265,9 +265,9 @@ if __name__ == '__main__':
 
                   save_path = 'VID-Trans-ReID_pth'
                   Dataset_name = args.Dataset_name
-                  Batch_size = args.Batch_size
+                  batch_size = args.batch_size
                   current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                  file_name = f"{Dataset_name}_Main_Model_Batch{Batch_size}_{current_time}.pth"
+                  file_name = f"{Dataset_name}_Main_Model_Batch{batch_size}_{current_time}.pth"
                   save_filename = os.path.join(save_path, file_name)
 
                   # 创建目录，如果它不存在
