@@ -207,7 +207,7 @@ if __name__ == '__main__':
         scheduler.step(epoch)
         model.train()
         #还是高搞清楚train_loader的数据结构，这里的train_loader是一个list，长度是epoch的长度，每个元素是一个list，长度是batch的长度，每个元素是一个tuple，长度是4，分别是img，pid，camid，target_cam
-        for Epoch_n, (img, pid, target_cam,labels2) in enumerate(tqdm(train_loader)):
+        for Epoch_n, (img, pid, target_cam,labels2) in enumerate(train_loader):
             #labels2 是噪声注入的标记，代表每张照片是否注入噪声,但还是没找着注入的地方
             optimizer.zero_grad()
             optimizer_center.zero_grad()
@@ -264,9 +264,8 @@ if __name__ == '__main__':
                   cmc_rank1=cmc
 
                   save_path = 'VID-Trans-ReID_pth'
-                  Dataset_name = args.Dataset_name
-                  batch_size = args.batch_size
                   current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
                   file_name = f"{Dataset_name}_Main_Model_Batch{batch_size}_{current_time}.pth"
                   save_filename = os.path.join(save_path, file_name)
 
