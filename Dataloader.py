@@ -95,8 +95,8 @@ def dataloader(Dataset_name,batchsize):
     q_val_set = VideoDataset(dataset.query, seq_len=4, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset.gallery, seq_len=4, sample='dense', transform=val_transforms)
 
-    # q_val_set = DataLoader(q_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
-    # g_val_set = DataLoader(g_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
+    #q_val_set = DataLoader(q_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
+    #g_val_set = DataLoader(g_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
     
     
     return train_loader, len(dataset.query), num_classes, cam_num, view_num,q_val_set,g_val_set

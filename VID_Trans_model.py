@@ -143,7 +143,7 @@ class VID_Trans(nn.Module):
         
 
 
-    # model(img, pid, cam_label=target_cam)
+    # model(img, pid, cam_label=target_cam) test中 model(imgs, pids, cam_label=camids)
     def forward(self, x, label=None, cam_label= None, view_label=None):  # label is unused if self.cos_layer == 'no'
         b=x.size(0) # batch size 32
         t=x.size(1) # seq 4
@@ -212,7 +212,7 @@ class VID_Trans(nn.Module):
         part4_f = part4[:, 0]
        
         
-        #4个头
+        #4个头 #测试的时候是[b,3072]
         part1_bn = self.bottleneck_1(part1_f) # [32, 3072]
         part2_bn = self.bottleneck_2(part2_f)
         part3_bn = self.bottleneck_3(part3_f)
@@ -229,7 +229,7 @@ class VID_Trans(nn.Module):
             return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals #[global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals 
         
         else:
-              return torch.cat([feat, part1_bn/4 , part2_bn/4 , part3_bn /4, part4_bn/4 ], dim=1)
+              return torch.cat([feat, part1_bn/4 , part2_bn/4 , part3_bn /4, part4_bn/4 ], dim=1) # b,13056--3072*4+768
             
 
 

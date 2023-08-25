@@ -82,6 +82,24 @@ If you are making use of this work in any way, you must please reference the fol
 
 
 python -u VID_Test.py --Dataset_name 'Mars' --model_path 'Transformer.pth'
+Computing CMC and mAP
+Results ---------- 
+mAP: 89.2%
+CMC curve r1: 0.9591568112373352
+CMC: 0.9592, mAP : 0.8921
+rerank: euclidean
+[30:32] Results ----------   
+[30:32] mAP: 91.9%
+[30:32] CMC curve r1: 0.9295125007629395
+[30:32] CMC: 0.9295, mAP : 0.9191
+cosine
+25:56] Computing CMC and mAP
+[26:21] Results ---------- 
+[26:21] mAP: 91.6%
+[26:21] CMC curve r1: 0.9295125007629395
+[26:21] CMC: 0.9295, mAP : 0.9165
+
+
 
 
 aug15 

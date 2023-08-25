@@ -249,10 +249,10 @@ class TransReID(nn.Module):
 
     def forward_features(self, x, camera_id): #transreid的前向传播
         B = x.shape[0]
-       
+        #823测试的时候不一定是 128 是随着 tracklet长度变化而变化的，不管b是不是固定的 patch_embed不会改变b
         x = self.patch_embed(x) # [128,3,256,128] -> [128,128,768] 是这样的 转化的第一位是bs所以还是128 不变，最后一位是embed_dim 所以是768，中间的就是patch数量，计算得到 128
         
-        cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks 823 b 1 768
         x = torch.cat((cls_tokens, x), dim=1)
         x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id]
         x = self.pos_drop(x)
