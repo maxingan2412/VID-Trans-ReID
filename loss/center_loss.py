@@ -12,7 +12,7 @@ class CenterLoss(nn.Module):
 
     Args:
         num_classes (int): number of classes.
-        feat_dim (int): feature dimension.
+        feat_dim (int): feature dimension.tsls
     """
 
     def __init__(self, num_classes=751, feat_dim=2048, use_gpu=True):

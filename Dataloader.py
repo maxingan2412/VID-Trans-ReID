@@ -89,9 +89,9 @@ def dataloader(Dataset_name,batchsize):
     cam_num = dataset.num_train_cams
     view_num = dataset.num_train_vids
 
-   # 这里该bs   823 想办法 把 q g 也弄出来batchsize
+   # 这里该bs   823 想办法 把 q g 也弄出来batchsize 这个sampler让数据从 8298组变成了 7532组，假如说这个tracklets少于seqlen就不要了，所以变成了7532 / bs = loader_len
     train_loader = DataLoader(train_set, batch_size=batchsize,sampler=RandomIdentitySampler(dataset.train, batchsize,4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
-  #暂时就认为上面的一些东西 让我们构建了dataloader。dataloader很多的构建方式是让每一个batch的数据比较平衡，比如bs32 seq4，我们就让一个batch里面有8个id，每个id有4个seq
+  #q g 基本没处理  比如q 有1980长度，其中每个元素是一个tracklets，tracklets里面的图片数量就是原始的数量，大小不一，for循环出来是个四元组 img pid camid img_path
     q_val_set = VideoDataset(dataset.query, seq_len=4, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset.gallery, seq_len=4, sample='dense', transform=val_transforms)
 

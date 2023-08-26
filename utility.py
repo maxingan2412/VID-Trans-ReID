@@ -17,7 +17,7 @@ class RandomIdentitySampler(Sampler):
     - num_instances (int): number of instances per identity in a batch.
     - batch_size (int): number of examples in a batch.
     """
-
+    #DataLoader(train_set, batch_size=batchsize,sampler=RandomIdentitySampler(dataset.train, batchsize,4),num_workers=4, collate_fn=train_collate_fn)
     def __init__(self, data_source, batch_size, num_instances):
         self.data_source = data_source
         self.batch_size = batch_size

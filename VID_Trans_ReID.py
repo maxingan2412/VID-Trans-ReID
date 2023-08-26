@@ -119,7 +119,8 @@ if __name__ == '__main__':
     np.random.seed(1234)
     random.seed(1234)
     torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True    
+    torch.backends.cudnn.benchmark = True
+    #举例trainloader 四元组 分别是一个batch的tensor size是 bs 4,3,256,128  bs大小的tesnor 代表pid  bs*4的tesnor 代表camerid bs*4的tensor 代表labels2，这个是噪声注入的标记，代表每张照片是否注入噪声
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size) #这里完成了 datloader的组合
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path)
     #这里似乎都还没有实例化，是for循环才开始有各种值的
@@ -139,6 +140,7 @@ if __name__ == '__main__':
     
     cmc_rank1=0
     acc = 0
+    #这里是总共要跑epoch次数
     for epoch in range(1, epochs + 1):
         start_time = time.time()
         loss_meter.reset()
@@ -147,6 +149,7 @@ if __name__ == '__main__':
         scheduler.step(epoch)
         model.train()
         #还是高搞清楚train_loader的数据结构，这里的train_loader是一个list，长度是epoch的长度，每个元素是一个list，长度是batch的长度，每个元素是一个tuple，长度是4，分别是img，pid，camid，target_cam
+        #这里是一个batch一个batch的训练，跑完所有数据就是一个epoch
         for Epoch_n, (img, pid, target_cam,labels2) in enumerate(train_loader):
             #labels2 是噪声注入的标记，代表每张照片是否注入噪声,但还是没找着注入的地方
             optimizer.zero_grad()
@@ -206,7 +209,7 @@ if __name__ == '__main__':
                   save_path = 'VID-Trans-ReID_pth'
                   current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-                  file_name = f"{Dataset_name}_Main_Model_Batch{batch_size}_{current_time}.pth"
+                  file_name = f"{Dataset_name}_BS{batch_size}_Epoch{epoch}_CMC{cmc:.4f}_MAP{map:.4f}_{current_time}.pth"
                   save_filename = os.path.join(save_path, file_name)
 
                   # 创建目录，如果它不存在
