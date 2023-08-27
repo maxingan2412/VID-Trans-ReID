@@ -19,8 +19,9 @@ fi
 echo "Experiment started at $CURRENT_TIME" >> "$LOG_FILE"
 echo "Command: $*" >> "$LOG_FILE"
 
-# 执行命令并将输出追加到日志文件，同时输出到终端（保留控制字符）
-"$@" 2>&1 | while IFS= read -r line; do
+# 执行命令并将stdout追加到日志文件，同时输出到终端（保留控制字符）
+# 这里仅使用了 1，意味着只有 stdout 会被处理
+"$@" 1> >(while IFS= read -r line; do
     # 计算从开始到现在所用的时间
     CURRENT_SECONDS=$(date +%s)
     ELAPSED_SECONDS=$((CURRENT_SECONDS - START_SECONDS))
@@ -28,7 +29,7 @@ echo "Command: $*" >> "$LOG_FILE"
     ELAPSED_SECONDS=$((ELAPSED_SECONDS % 60))
     # 添加时间信息并输出
     printf "[%d:%02d] %s\n" "$ELAPSED_MINUTES" "$ELAPSED_SECONDS" "$line"
-done | tee -ai "$LOG_FILE"
+done | tee -ai "$LOG_FILE") 2>&1
 
 # 记录结束时间
 echo "Experiment ended at $(date +"%Y-%m-%d %H:%M:%S")" >> "$LOG_FILE"

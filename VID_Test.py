@@ -9,7 +9,7 @@ import numpy as np
 import os
 import argparse
 from tqdm import tqdm
-
+import sys
 import logging
 import os
 import time
@@ -162,7 +162,7 @@ def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=21):
 def extract_features(data_loader, model, use_gpu=True, pool='avg'):
     features_list, pids_list, camids_list = [], [], []
     with torch.no_grad():
-        for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
+        for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader), file=sys.stderr):
         #for imgs, pids, camids, _ in tqdm(data_loader):
             if use_gpu:
                 imgs = imgs.cuda(non_blocking=True)
@@ -213,15 +213,22 @@ def test(model, queryloader, galleryloader, pool='avg', use_gpu=True):
 
     print("Computing distance matrix")
     #distmat = compute_distance_matrix(qf, gf).numpy()
-    distmat = compute_distance_matrix(qf, gf, 'cosine')
+    metricchoose = 'euclidean'
+    distmat = compute_distance_matrix(qf, gf, metricchoose)
     distmat = distmat.numpy()
 
     rerank = True
     if rerank:
-        print('Applying person re-ranking ...')
-        distmat_qq = compute_distance_matrix(qf, qf, 'cosine')
-        distmat_gg = compute_distance_matrix(gf, gf, 'cosine')
-        distmat = re_ranking(distmat, distmat_qq, distmat_gg)
+        #print('Applying person re-ranking ...')
+        distmat_qq = compute_distance_matrix(qf, qf, metricchoose)
+        distmat_gg = compute_distance_matrix(gf, gf, metricchoose)
+        distmat1 = re_ranking(distmat, distmat_qq, distmat_gg)
+        print("Computing CMC and mAP with reranking,")
+        cmc, mAP = evaluate(distmat1, q_pids, g_pids, q_camids, g_camids)
+
+        print("Results ---------- ")
+        print(f"mAP: {mAP:.1%}")
+        print(f"CMC curve r1: {cmc[0]}")
 
 
 

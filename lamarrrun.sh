@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=vit200
+#SBATCH --job-name=vit240
 #SBATCH --time=72:00:00
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=8
@@ -24,11 +24,11 @@ fi
 # 记录开始时间和命令
 echo "Experiment started at $CURRENT_TIME" >> "$LOG_FILE"
 
-# 执行命令并将输出追加到日志文件，同时输出到终端（保留控制字符）
+# 执行命令并将stdout追加到日志文件，同时输出到终端（保留控制字符）
 function execute_and_log {
     local CMD="$1"
     echo "Executing: $CMD" >> "$LOG_FILE"
-    eval "$CMD" 2>&1 | while IFS= read -r line; do
+    eval "$CMD" | while IFS= read -r line; do
         # 计算从开始到现在所用的时间
         CURRENT_SECONDS=$(date +%s)
         ELAPSED_SECONDS=$((CURRENT_SECONDS - START_SECONDS))
@@ -39,13 +39,14 @@ function execute_and_log {
     done | tee -ai "$LOG_FILE"
 }
 
+
 # 在后台运行 nvidia-smi 命令并将输出重定向到日志文件
 (sleep 300 && nvidia-smi) >> "$LOG_FILE" 2>&1 &
 
 # 执行命令
-echo "setting : bs 200 epoch 240" >> "$LOG_FILE"
+echo "setting : bs 240 epoch 240" >> "$LOG_FILE"
 execute_and_log "nvidia-smi"
-execute_and_log "/home/ma1/anaconda3/envs/vid/bin/python -u VID_Trans_ReID.py --Dataset_name 'Mars' --test_epoches 80 --batch_size 200 --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth' --epochs 240"
+execute_and_log "/home/ma1/anaconda3/envs/vid/bin/python -u VID_Trans_ReID.py --Dataset_name 'Mars' --test_epoches 80 --batch_size 240 --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth' --epochs 240"
 
 # 记录结束时间
 echo "Experiment ended at $(date +"%Y-%m-%d %H:%M:%S")" >> "$LOG_FILE"
