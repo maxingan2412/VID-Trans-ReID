@@ -6,13 +6,55 @@ from vit_ID import TransReID,Block
 from functools import partial
 from torch.nn import functional as F
 
+
+def reshape_along_dim(a, new_shape):
+    """
+    Reshape tensor `a` along its second dimension and return a new tensor.
+
+    Parameters:
+        a (torch.Tensor): Input tensor with shape (X, Y, Z)
+        new_shape (tuple): The new shape to which each slice along the second dimension should be reshaped. E.g., (32, -1)
+
+    Returns:
+        torch.Tensor: Reshaped tensor
+    """
+    # 检查输入是否需要梯度，以便新张量也具有相同的属性
+    requires_grad = a.requires_grad
+
+    # 初始化用于保存重塑后张量切片的列表
+    reshaped_slices = []
+
+    # 沿第二个维度（dim=1）进行遍历
+    for i in range(a.size(1)):
+        slice_i = a[:, i, :]
+        reshaped_slice = slice_i.reshape(new_shape)  # 将切片重塑为新形状
+        reshaped_slices.append(reshaped_slice)
+
+    # 沿同一维度将所有重塑后的切片重新堆叠
+    reshaped_a = torch.stack(reshaped_slices, dim=1)
+
+    # 如果原张量需要梯度，确保新张量也需要
+    if requires_grad:
+        reshaped_a.requires_grad_()
+
+    return reshaped_a
+
+
+
+
 #明天重点看这个，是怎么混合特征的 x ,token=TCSS(features, self.shift_num, b,t),其实重点就是 View -- transpose -- view 这样实现了混合，我们可以把128 看做是128张图片的特征，混合以后，这128里面就成了俩图片的混合特征，各站64
 #818 不仅仅是混合 而且是把 patch4和1， 从[128,129,768] -->[32,129,3072]
-def TCSS(features, shift, b,t): # t:4, b:32,shift:5
+def TCSS(feature, shift, b,t): # t:4, b:32,shift:5
     #aggregate features at patch level
-    #819 这步可以理解为原来代表的是 128patch的特征，现在这个128代表了 128个融合了的特征，也就是说 这步融合了patch，如果我们还把128看做是patch上的特征，那么这个特征就是融合了的特征
-    features=features.view(b,features.size(1),t*features.size(2))   # [128,129,768] -->[32,129,3072]
+    #819 这步可以理解为原来代表的是 128patch的特征，现在这个128代表了 128个融合了的特征，也就是说 这步融合了patch，如果我们还把128看做是patch上的特征，那么这个特征就是融合了的特 128 = bs * seqlen
+
+    features = reshape_along_dim(feature,(b,-1))
+    #features=feature.view(b,feature.size(1),t*feature.size(2))   # [128,129,768] -->[32,129,3072]
+    #features = reshape_and_copy(feature,t)
+    # features_new = reshape_and_copy(feature,t)
     token = features[:, 0:1] # [32,1,3072]
+
+
 
     batchsize = features.size(0) # 32
     dim = features.size(-1) # 3072
