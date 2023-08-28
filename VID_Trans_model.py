@@ -255,7 +255,7 @@ class VID_Trans(nn.Module):
         part3_bn = self.bottleneck_3(part3_f)
         part4_bn = self.bottleneck_4(part4_f)
         
-        if self.training: # 要搞清楚 到底是一个batch 32意思是32个图片还是 32 个常委4的小视频 ----> 32个视频
+        if self.training: # 32个视频
             
             Global_ID = self.classifier(feat) # [32, 768] ---> [32, 625]
             Local_ID1 = self.classifier_1(part1_bn) # [32, 3072] ---> [32, 625]
