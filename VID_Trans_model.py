@@ -44,11 +44,11 @@ def reshape_along_dim(a, new_shape):
 
 #明天重点看这个，是怎么混合特征的 x ,token=TCSS(features, self.shift_num, b,t),其实重点就是 View -- transpose -- view 这样实现了混合，我们可以把128 看做是128张图片的特征，混合以后，这128里面就成了俩图片的混合特征，各站64
 #818 不仅仅是混合 而且是把 patch4和1， 从[128,129,768] -->[32,129,3072]
-def TCSS(feature, shift, b,t): # t:4, b:32,shift:5
+def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     #aggregate features at patch level
     #819 这步可以理解为原来代表的是 128patch的特征，现在这个128代表了 128个融合了的特征，也就是说 这步融合了patch，如果我们还把128看做是patch上的特征，那么这个特征就是融合了的特 128 = bs * seqlen
 
-    features = reshape_along_dim(feature,(b,-1))
+    features = reshape_along_dim(features,(b,-1))
     #features=feature.view(b,feature.size(1),t*feature.size(2))   # [128,129,768] -->[32,129,3072]
     #features = reshape_and_copy(feature,t)
     # features_new = reshape_and_copy(feature,t)
