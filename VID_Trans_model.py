@@ -39,9 +39,6 @@ def reshape_along_dim(a, new_shape):
 
     return reshaped_a
 
-
-
-
 #明天重点看这个，是怎么混合特征的 x ,token=TCSS(features, self.shift_num, b,t),其实重点就是 View -- transpose -- view 这样实现了混合，我们可以把128 看做是128张图片的特征，混合以后，这128里面就成了俩图片的混合特征，各站64
 #818 不仅仅是混合 而且是把 patch4和1， 从[128,129,768] -->[32,129,3072]
 def TCSS(features, shift, b,t): # t:4, b:32,shift:5
@@ -96,8 +93,6 @@ def weights_init_classifier(m):
         nn.init.normal_(m.weight, std=0.001)
         if m.bias:
             nn.init.constant_(m.bias, 0.0)
-
-
 
 
 class VID_Trans(nn.Module):
