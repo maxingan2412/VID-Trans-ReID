@@ -162,7 +162,7 @@ def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=21):
 def extract_features(data_loader, model, use_gpu=True, pool='avg'):
     features_list, pids_list, camids_list = [], [], []
     with torch.no_grad():
-        for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader,file=sys.stderr)):
+        for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
         #for imgs, pids, camids, _ in tqdm(data_loader):
             if use_gpu:
                 imgs = imgs.cuda(non_blocking=True)
