@@ -259,7 +259,7 @@ class TransReID(nn.Module):
         
         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks 823 b 1 768
         x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id]
+        x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id] # self.Cam[camera_id]就是我们初始化了6中相机id的参数，这里呢我们有了这些b*seq个样本的图像，也就有了这么多的图片，我们按照他们的id分别载入这些参数
         x = self.pos_drop(x)
 
         for blk in self.blocks[:-1]:

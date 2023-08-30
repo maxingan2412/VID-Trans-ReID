@@ -327,7 +327,7 @@ class VideoDataset_inderase(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index): #__getitem__ 方法通过使对象支持索引操作，使得我们可以按照序列的方式访问自定义类的元素,__是双下划线（__）开头和结尾的函数在Python中被称为"魔法方法"（magic methods）或"特殊方法"（special methods）。这些方法是Python类中的特殊函数，用于定义类的行为，例如初始化、比较、运算符重载等。这些魔法方法会在特定的上下文中被自动调用，而不需要直接调用它们。
-        img_paths, pid, camid = self.dataset[index] #这里拿到的是随机的一个tracklets。
+        img_paths, pid, camid = self.dataset[index] #这里拿到的是随机的一个tracklets 再一个tracklets中只有一个pid和camid。
         num = len(img_paths)
         if self.sample != "intelligent":
             frame_indices = range(num)
@@ -369,11 +369,11 @@ class VideoDataset_inderase(Dataset):
 
             if self.transform is not None:
                 img = self.transform(img) # 这里已经把图片用归一化等东西 tensro已经是比较小的数，比如-1 0.5之类，同时这里img已经是 tensor 3 256 128
-            img , temp  = self.erase(img) # 对图片进行随机擦除 如果想看擦除，就debug 这里temp 从擦除看是0
+            img , temp  = self.erase(img) # 1就是擦了 0就是没擦 temp是1或者0
             labels.append(temp)
             img = img.unsqueeze(0) # 在第0维度加一个维度，变成 1 3 256 128
             imgs.append(img)
-            targt_cam.append(camid)
+            targt_cam.append(camid) #pid和camid在一个tracklet中其实都只有一个，这里处理camid应该是为了嵌入camid的信息，相当于这里直接扩张了cam的维度
         labels = torch.tensor(labels)
         imgs = torch.cat(imgs, dim=0) #通过调用 torch.cat(imgs, dim=0)，你将这些图像张量沿着维度0（即批量维度）进行拼接，得到一个更大的张量。 这里是一个list。里面是各个tensror 1 3 256 128
         
