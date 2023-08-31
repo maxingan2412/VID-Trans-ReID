@@ -52,7 +52,7 @@ class RandomIdentitySampler(Sampler):
                 if len(batch_idxs) == self.num_instances:
                     batch_idxs_dict[pid].append(batch_idxs)
                     batch_idxs = []
-
+        #batch_idxs_dict是一个625的dict 里面key是pid 对应的是4个一组的图片的索引，顺序是打乱的 比如 原来pid0对应的186张图片 原来这个dict对应的就是186张图的编号，现在变成了46组4个张图。46是list
         avai_pids = copy.deepcopy(self.pids)
         final_idxs = []
 

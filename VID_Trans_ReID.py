@@ -99,6 +99,8 @@ if __name__ == '__main__':
         '--batch_size', default=32, type=int, help='batch size of train')
     parser.add_argument(
         '--test_epoches', default=30, type=int, help='e.g if setting to 30 means we test the model every 30 epoches')
+    parser.add_argument(
+        '--seq_len', default=4, type=int, help='seq len')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
@@ -106,6 +108,7 @@ if __name__ == '__main__':
     epochs = args.epochs
     batch_size = args.batch_size
     test_epoches = args.test_epoches
+    seq_len = args.seq_len
 
 
     print("Arguments:")
@@ -121,9 +124,9 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
     #举例trainloader 四元组 分别是一个batch的tensor size是 bs 4,3,256,128  bs大小的tesnor 代表pid  bs*4的tesnor 代表camerid bs*4的tensor 代表labels2，这个是噪声注入的标记，代表每张照片是否注入噪声
-    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size) #这里完成了 datloader的组合
+    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len) #这里完成了 datloader的组合
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path)
-    #这里似乎都还没有实例化，是for循环才开始有各种值的
+
     loss_fun,center_criterion= make_loss( num_classes=num_classes) # return   loss_func,center_criterion
     optimizer_center = torch.optim.SGD(center_criterion.parameters(), lr= 0.5)
     

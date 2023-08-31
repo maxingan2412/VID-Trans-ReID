@@ -6,3 +6,4 @@ opencv-python
 matplotlib
 scipy
 torch-ema
+notebook
