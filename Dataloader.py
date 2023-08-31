@@ -84,16 +84,16 @@ def dataloader(Dataset_name,batchsize,seq_len):
 
     dataset = __factory[Dataset_name]() # 这里指向mars数据集，看mars类中是怎么构造出这个数据集的 再这里,获得了datasets类的实例，这个实例就是mars数据集，里面有train，query，gallery等等
     #VideoDataset_inderase 这个生成了trainset 里面有随机擦除的操作
-    train_set = VideoDataset_inderase(dataset.train, seq_len=seq_len, sample='intelligent',transform=train_transforms) #可以认为是把mars数据集中的train部分拿出来，然后用VideoDataset类进行处理，这里是RandomErasing3， 得到train_set
+    train_set = VideoDataset_inderase(dataset=dataset.train, seq_len=seq_len, sample='intelligent',transform=train_transforms) #可以认为是把mars数据集中的train部分拿出来，然后用VideoDataset类进行处理，这里是RandomErasing3， 得到train_set
     num_classes = dataset.num_train_pids
     cam_num = dataset.num_train_cams
     view_num = dataset.num_train_vids
 
    # 这里该bs   823 想办法 把 q g 也弄出来batchsize 这个sampler让数据从 8298组变成了 7532组，假如说这个tracklets少于seqlen就不要了，所以变成了7532 / bs = loader_len
-    train_loader = DataLoader(train_set, batch_size=batchsize,sampler=RandomIdentitySampler(dataset.train, batchsize,seq_len),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
+    train_loader = DataLoader(dataset=train_set, batch_size=batchsize,sampler=RandomIdentitySampler(data_source=dataset.train, batch_size=batchsize,num_instances=4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
   #q g 基本没处理  比如q 有1980长度，其中每个元素是一个tracklets，tracklets里面的图片数量就是原始的数量，大小不一，for循环出来是个四元组 img pid camid img_path
-    q_val_set = VideoDataset(dataset.query, seq_len=seq_len, sample='dense', transform=val_transforms)
-    g_val_set = VideoDataset(dataset.gallery, seq_len=seq_len, sample='dense', transform=val_transforms)
+    q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='dense', transform=val_transforms)
+    g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='dense', transform=val_transforms)
 
     #q_val_set = DataLoader(q_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
     #g_val_set = DataLoader(g_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
