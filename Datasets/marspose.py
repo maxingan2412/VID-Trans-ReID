@@ -18,13 +18,15 @@ class MarsPose(PoseDataset):
         - keypoints: 17
         - cameras: 6.
     """
-    dataset_dir = 'mars'
-    dataset_url = None
+    #dataset_dir = 'mars'
+    #dataset_url = None
 
     def __init__(self, root='', **kwargs):
         self.root = osp.abspath(osp.expanduser(root)) #'/home/ma1/work/PoseTrackReID'
-        self.dataset_dir = osp.join(self.root, self.dataset_dir) # '/home/ma1/work/PoseTrackReID/data/mars'
-        self.download_dataset(self.dataset_dir, self.dataset_url)
+        # self.dataset_dir = osp.join(self.root, self.dataset_dir) # '/home/ma1/work/PoseTrackReID/data/mars'
+        self.dataset_dir = osp.join(self.root, '../', 'data/MARS')
+
+        #self.download_dataset(self.dataset_dir, self.dataset_url)
 
         self.train_name_path = osp.join(
             self.dataset_dir, 'info/train_name.txt'
