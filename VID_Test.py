@@ -271,7 +271,7 @@ if __name__ == '__main__':
 
 
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len)
-    model = VID_Trans(num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth')
+    model = VID_Trans(num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth',seq_len=seq_len)
 
     device = "cuda"
     model=model.to(device)

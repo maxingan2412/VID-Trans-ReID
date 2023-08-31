@@ -96,11 +96,11 @@ def weights_init_classifier(m):
 
 
 class VID_Trans(nn.Module):
-    def __init__(self, num_classes, camera_num,pretrainpath):
+    def __init__(self, num_classes, camera_num,pretrainpath,seq_len):
         super(VID_Trans, self).__init__()
         self.in_planes = 768
         self.num_classes = num_classes
-        
+        self.seq_len=seq_len
         
         self.base =TransReID(
         img_size=[256, 128], patch_size=16, stride_size=[16, 16], embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,\
@@ -133,36 +133,36 @@ class VID_Trans(nn.Module):
         dpr = [x.item() for x in torch.linspace(0, 0, 12)]  # stochastic depth decay rule
         
         self.block1 = Block(
-                dim=3072, num_heads=12, mlp_ratio=4, qkv_bias=True, qk_scale=None,
+                dim=self.seq_len * 768, num_heads=12, mlp_ratio=4, qkv_bias=True, qk_scale=None,
                 drop=0, attn_drop=0, drop_path=dpr[11], norm_layer=partial(nn.LayerNorm, eps=1e-6)) #partial是偏函数，就是把nn.LayerNorm的参数eps=1e-6固定下来，这样就不用每次都写了
        
         self.b2 = nn.Sequential(
             self.block1,
-            nn.LayerNorm(3072) #copy.deepcopy(layer_norm)
+            nn.LayerNorm(self.seq_len * 768) #copy.deepcopy(layer_norm)
         )
         
         
-        self.bottleneck_1 = nn.BatchNorm1d(3072) # BatchNorm1d(3072, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bottleneck_1 = nn.BatchNorm1d(self.seq_len * 768) # BatchNorm1d(3072, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bottleneck_1.bias.requires_grad_(False)
         self.bottleneck_1.apply(weights_init_kaiming)
-        self.bottleneck_2 = nn.BatchNorm1d(3072)
+        self.bottleneck_2 = nn.BatchNorm1d(self.seq_len * 768)
         self.bottleneck_2.bias.requires_grad_(False)
         self.bottleneck_2.apply(weights_init_kaiming)
-        self.bottleneck_3 = nn.BatchNorm1d(3072)
+        self.bottleneck_3 = nn.BatchNorm1d(self.seq_len * 768)
         self.bottleneck_3.bias.requires_grad_(False)
         self.bottleneck_3.apply(weights_init_kaiming)
-        self.bottleneck_4 = nn.BatchNorm1d(3072)
+        self.bottleneck_4 = nn.BatchNorm1d(self.seq_len * 768)
         self.bottleneck_4.bias.requires_grad_(False)
         self.bottleneck_4.apply(weights_init_kaiming)
 
 
-        self.classifier_1 = nn.Linear(3072, self.num_classes, bias=False)
+        self.classifier_1 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
         self.classifier_1.apply(weights_init_classifier)
-        self.classifier_2 = nn.Linear(3072, self.num_classes, bias=False)
+        self.classifier_2 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
         self.classifier_2.apply(weights_init_classifier)
-        self.classifier_3 = nn.Linear(3072, self.num_classes, bias=False)
+        self.classifier_3 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
         self.classifier_3.apply(weights_init_classifier)
-        self.classifier_4 = nn.Linear(3072, self.num_classes, bias=False)
+        self.classifier_4 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
         self.classifier_4.apply(weights_init_classifier)
 
 
