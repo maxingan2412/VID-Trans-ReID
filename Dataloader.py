@@ -14,6 +14,7 @@ import math
 from timm.data.random_erasing import RandomErasing
 from utility import RandomIdentitySampler,RandomErasing3
 from Datasets.MARS_dataset import Mars
+from Datasets.marspose import MarsPose
 #from Datasets.mars import MarsPose
 from Datasets.iLDSVID import iLIDSVID
 from Datasets.PRID_dataset import PRID
@@ -25,7 +26,7 @@ __factory = {
     'Mars':Mars,
     'iLIDSVID':iLIDSVID,
     'PRID':PRID,
-    #'MarsPose':MarsPose
+    'MarsPose':MarsPose
 }
 #这里定义了 dataloader的打包方式
 def train_collate_fn(batch):# batch list 32   里面是含有4个元素的tuple。 0元素： img tensor 4 3,256,128  1元素：int pid  2元素：list camid 3元素：tensor 4
