@@ -45,8 +45,8 @@ def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     #aggregate features at patch level
     #819 这步可以理解为原来代表的是 128patch的特征，现在这个128代表了 128个融合了的特征，也就是说 这步融合了patch，如果我们还把128看做是patch上的特征，那么这个特征就是融合了的特 128 = bs * seqlen
 
-    features = reshape_along_dim(features,(b,-1))
-    #features=feature.view(b,feature.size(1),t*feature.size(2))   # [128,129,768] -->[32,129,3072]
+    #features = reshape_along_dim(features,(b,-1))
+    features=features.view(b,features.size(1),t*features.size(2))   # [128,129,768] -->[32,129,3072]
     #features = reshape_and_copy(feature,t)
     # features_new = reshape_and_copy(feature,t)
     token = features[:, 0:1] # [32,1,3072]
@@ -185,9 +185,21 @@ class VID_Trans(nn.Module):
         b=x.size(0) # batch size 32
         t=x.size(1) # seq 4
         # 32 4 3 256 128  ---->  128 3 256 128
-        x=x.view(x.size(0)*x.size(1), x.size(2), x.size(3), x.size(4)) #[32,4,3,256,128] --> [128,3,256,128]
-        features = self.base(x, cam_label=cam_label) # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
-        
+        concat_features = []
+        #x = x.view(x.size(0)*x.size(1), x.size(2), x.size(3), x.size(4)) #[32,4,3,256,128] --> [128,3,256,128]
+        #features = self.base(x, cam_label=cam_label) # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
+        #feature1 = self.base(x[:,0], cam_label=cam_label) # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
+        for i in range(t):
+            xt = x[:,i]
+            y = self.base(xt, cam_label=cam_label)  # 假设y的尺寸为[128, 129, 768]
+            concat_features.append(y)
+        # 沿着第一个维度（batch size）进行拼接
+        features = torch.cat(concat_features, dim=1)
+
+
+
+
+
         #其实global的这个attention 它不是一个关于时间或者关于tracklet的attetnion  而是把768这个高维压缩， 得到的[32,4]比如 其中一行一列 表示的是 再第一个tracklet的 t1的特征。 后面用这个特征去加权 正常768这个特征。
         # global branch gb的attetnion就是论文中的 temporal spatial attention
         b1_feat = self.b1(features) # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
