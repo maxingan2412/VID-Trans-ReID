@@ -8,8 +8,8 @@ def make_loss(num_classes,seq_len):
     
     feat_dim =768
     center_criterion = CenterLoss(num_classes=num_classes, feat_dim=feat_dim, use_gpu=True)  # center loss
-    center_criterion2 = CenterLoss(num_classes=num_classes, feat_dim= seq_len * 768, use_gpu=True)
-    
+    # center_criterion2 = CenterLoss(num_classes=num_classes, feat_dim= seq_len * 768, use_gpu=True)
+    center_criterion2 = CenterLoss(num_classes=num_classes, feat_dim= 1 * 768, use_gpu=True)
     triplet = TripletLoss()
     xent = CrossEntropyLabelSmooth(num_classes=num_classes)
         
