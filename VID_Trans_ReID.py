@@ -168,14 +168,16 @@ if __name__ == '__main__':
             with amp.autocast(enabled=True):
                 target_cam=target_cam.view(-1)
                 # [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
-                score, feat ,a_vals= model(img, pid, cam_label=target_cam) #这里是模型的前向传播 score是一个list 长度是5，元素是 glbaol和local的特征 维度是 32 625
-                
+                #score, feat ,a_vals= model(img, pid, cam_label=target_cam) #这里是模型的前向传播 score是一个list 长度是5，元素是 glbaol和local的特征 维度是 32 625
+                score, feat = model(img, pid, cam_label=target_cam)
+
                 labels2=labels2.to(device)
-                attn_noise  = a_vals * labels2 # 俩都是 32 4，
-                attn_loss = attn_noise.sum(1).mean() #是一个值了 tensor(1.3899, device='cuda:0', grad_fn=<MeanBackward0>)
+               # attn_noise  = a_vals * labels2 # 俩都是 32 4，
+                #attn_loss = attn_noise.sum(1).mean() #是一个值了 tensor(1.3899, device='cuda:0', grad_fn=<MeanBackward0>)
                 # ID_LOSS+ TRI_LOSS, center
                 loss_id ,center= loss_fun(score, feat, pid, target_cam) # 14 2000+
-                loss=loss_id+ 0.0005*center +attn_loss
+                #loss=loss_id+ 0.0005*center +attn_loss
+                loss = loss_id + 0.0005 * center
             scaler.scale(loss).backward() #这里是反向传播
 
             scaler.step(optimizer) # 用计算出的梯度来更新模型的参数。但在实际更新参数之前，GradScaler会首先检查这些梯度是否存在不稳定的情况（例如太大或太小）。如果存在不稳定的情况，它会跳过参数更新，并调整尺度因子以防止将来再次出现这种情况。如果梯度稳定，它会将梯度除以尺度因子并执行参数更新。

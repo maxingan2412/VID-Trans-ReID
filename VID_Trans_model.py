@@ -46,7 +46,7 @@ def TCSS(features, shift, b,t): # t:4, b:32,shift:5
     #819 这步可以理解为原来代表的是 128patch的特征，现在这个128代表了 128个融合了的特征，也就是说 这步融合了patch，如果我们还把128看做是patch上的特征，那么这个特征就是融合了的特 128 = bs * seqlen
 
     #features = reshape_along_dim(features,(b,-1))
-    features=features.view(b,features.size(1),t*features.size(2))   # [128,129,768] -->[32,129,3072]
+    #features=features.view(b,features.size(1),t*features.size(2))   # [128,129,768] -->[32,129,3072]
     #features = reshape_and_copy(feature,t)
     # features_new = reshape_and_copy(feature,t)
     token = features[:, 0:1] # [32,1,3072]
@@ -341,36 +341,36 @@ class VID_TransVideo(nn.Module):
         dpr = [x.item() for x in torch.linspace(0, 0, 12)]  # stochastic depth decay rule
 
         self.block1 = Block(
-            dim=self.seq_len * 768, num_heads=12, mlp_ratio=4, qkv_bias=True, qk_scale=None,
+            dim=1 * 768, num_heads=12, mlp_ratio=4, qkv_bias=True, qk_scale=None,
             drop=0, attn_drop=0, drop_path=dpr[11],
             norm_layer=partial(nn.LayerNorm, eps=1e-6))  # partial是偏函数，就是把nn.LayerNorm的参数eps=1e-6固定下来，这样就不用每次都写了
 
         self.b2 = nn.Sequential(
             self.block1,
-            nn.LayerNorm(self.seq_len * 768)  # copy.deepcopy(layer_norm)
+            nn.LayerNorm(1 * 768)  # copy.deepcopy(layer_norm)
         )
 
         self.bottleneck_1 = nn.BatchNorm1d(
-            self.seq_len * 768)  # BatchNorm1d(3072, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            1 * 768)  # BatchNorm1d(3072, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bottleneck_1.bias.requires_grad_(False)
         self.bottleneck_1.apply(weights_init_kaiming)
-        self.bottleneck_2 = nn.BatchNorm1d(self.seq_len * 768)
+        self.bottleneck_2 = nn.BatchNorm1d(1 * 768)
         self.bottleneck_2.bias.requires_grad_(False)
         self.bottleneck_2.apply(weights_init_kaiming)
-        self.bottleneck_3 = nn.BatchNorm1d(self.seq_len * 768)
+        self.bottleneck_3 = nn.BatchNorm1d(1 * 768)
         self.bottleneck_3.bias.requires_grad_(False)
         self.bottleneck_3.apply(weights_init_kaiming)
-        self.bottleneck_4 = nn.BatchNorm1d(self.seq_len * 768)
+        self.bottleneck_4 = nn.BatchNorm1d(1 * 768)
         self.bottleneck_4.bias.requires_grad_(False)
         self.bottleneck_4.apply(weights_init_kaiming)
 
-        self.classifier_1 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
+        self.classifier_1 = nn.Linear(1 * 768, self.num_classes, bias=False)
         self.classifier_1.apply(weights_init_classifier)
-        self.classifier_2 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
+        self.classifier_2 = nn.Linear(1 * 768, self.num_classes, bias=False)
         self.classifier_2.apply(weights_init_classifier)
-        self.classifier_3 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
+        self.classifier_3 = nn.Linear(1 * 768, self.num_classes, bias=False)
         self.classifier_3.apply(weights_init_classifier)
-        self.classifier_4 = nn.Linear(self.seq_len * 768, self.num_classes, bias=False)
+        self.classifier_4 = nn.Linear(1 * 768, self.num_classes, bias=False)
         self.classifier_4.apply(weights_init_classifier)
 
         # -------------------video attention-------------
@@ -471,7 +471,7 @@ class VID_TransVideo(nn.Module):
             Local_ID4 = self.classifier_4(part4_bn)  # [32, 3072] ---> [32, 625]
             # loss_id ,center
             return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4], [global_feat, part1_f, part2_f, part3_f,
-                                                                             part4_f], a_vals  # [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
+                                                                             part4_f]  # [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
 
         else:
             return torch.cat([feat, part1_bn / 4, part2_bn / 4, part3_bn / 4, part4_bn / 4], dim=1)  # b,13056--3072*4+768
