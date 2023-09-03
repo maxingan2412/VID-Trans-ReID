@@ -405,31 +405,27 @@ class VID_TransVideo(nn.Module):
 
         # 其实global的这个attention 它不是一个关于时间或者关于tracklet的attetnion  而是把768这个高维压缩， 得到的[32,4]比如 其中一行一列 表示的是 再第一个tracklet的 t1的特征。 后面用这个特征去加权 正常768这个特征。
         # global branch gb的attetnion就是论文中的 temporal spatial attention
-        b1_feat = self.b1(
-            features)  # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
+        b1_feat = self.b1(features)  # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
         global_feat = b1_feat[:, 0]  # [128, 768] 取第一个token 当做global feature
 
-        global_feat = global_feat.unsqueeze(dim=2)  # [128, 768, 1] tensor
-        global_feat = global_feat.unsqueeze(dim=3)  # [128, 768, 1, 1] tensor
-        a = F.relu(self.attention_conv(global_feat))  # [128, 256, 1, 1] tensor
-        a = a.view(b, t, self.middle_dim)  # [32, 4, 256] tensor
-        a = a.permute(0, 2, 1)  # [32, 256, 4] tensor
-        a = F.relu(self.attention_tconv(a))  # [32, 256, 4] ---> [32, 1, 4] tensor
-        a = a.view(b, t)  # [32, 1, 4] ---> [32, 4]
-        a_vals = a  # 这个东西看做是 temporal spatial attention的权重，
+        # global_feat = global_feat.unsqueeze(dim=2)  # [128, 768, 1] tensor
+        # global_feat = global_feat.unsqueeze(dim=3)  # [128, 768, 1, 1] tensor
+        # a = F.relu(self.attention_conv(global_feat))  # [128, 256, 1, 1] tensor
+        # a = a.view(b, t, self.middle_dim)  # [32, 4, 256] tensor
+        # a = a.permute(0, 2, 1)  # [32, 256, 4] tensor
+        # a = F.relu(self.attention_tconv(a))  # [32, 256, 4] ---> [32, 1, 4] tensor
+        # a = a.view(b, t)  # [32, 1, 4] ---> [32, 4]
+        # a_vals = a  # 这个东西看做是 temporal spatial attention的权重，
+        #
+        # a = F.softmax(a, dim=1)  # [32, 4]，dim=1意思就是 再4这个维度上做， 再哪个维度上做，那哪个维度的值加起来等于1，这里就是4个值加起来等于1
+        # x = global_feat.view(b, t, -1)  # [128,3,256,128] ---> [32, 4, 768]，global_feat[128 768 1 1]   这里不是形状的改变 而是相当于把x改变了一个值，所以相对来说前面x应该换一个名字
+        # a = torch.unsqueeze(a, -1)  # [32, 4] ---> [32, 4, 1]
+        # a = a.expand(b, t, self.in_planes)  # [32, 4, 1] ---> [32, 4, 768] 几层括号就是几维的tensor
+        # att_x = torch.mul(x, a)  # [32, 4, 768]  element-wise multiplication
+        # att_x = torch.sum(att_x, 1)  # [32, 4, 768] ---> [32, 768]  沿着时间维度进行求和
 
-        a = F.softmax(a, dim=1)  # [32, 4]，dim=1意思就是 再4这个维度上做， 再哪个维度上做，那哪个维度的值加起来等于1，这里就是4个值加起来等于1
-        x = global_feat.view(b, t,
-                             -1)  # [128,3,256,128] ---> [32, 4, 768]，global_feat[128 768 1 1]   这里不是形状的改变 而是相当于把x改变了一个值，所以相对来说前面x应该换一个名字
-        a = torch.unsqueeze(a, -1)  # [32, 4] ---> [32, 4, 1]
-        a = a.expand(b, t, self.in_planes)  # [32, 4, 1] ---> [32, 4, 768] 几层括号就是几维的tensor
-        att_x = torch.mul(x, a)  # [32, 4, 768]  element-wise multiplication
-        att_x = torch.sum(att_x, 1)  # [32, 4, 768] ---> [32, 768]  沿着时间维度进行求和
-
-        global_feat = att_x.view(b,
-                                 self.in_planes)  # 这里也是 原来 global_feat是[128, 768, 1, 1] tensor，现在直接给变成了[32, 768] tensor，并不是转化呢，而是重新赋值了
-        feat = self.bottleneck(
-            global_feat)  # [32, 768] BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        #global_feat = att_x.view(b,self.in_planes)  # 这里也是 原来 global_feat是[128, 768, 1, 1] tensor，现在直接给变成了[32, 768] tensor，并不是转化呢，而是重新赋值了
+        feat = self.bottleneck(global_feat)  # [32, 768] BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
 
         # video patch patr features   所以说，网络本身又两种 blcok一种输入是 768 一种是 3072 似乎block只看dim 形状不管
 
@@ -442,8 +438,7 @@ class VID_TransVideo(nn.Module):
 
         # part1
         part1 = x[:, :patch_length]  # [32, 32, 3072] 似乎
-        part1 = self.b2(torch.cat((token, part1),
-                                  dim=1))  # [32, 32, 3072] ---> [32, 33, 3072]  这里是先concat 然后经过了一个block+ layer norm 也就是又混合了一词特征 才去的第一个token
+        part1 = self.b2(torch.cat((token, part1),dim=1))  # [32, 32, 3072] ---> [32, 33, 3072]  这里是先concat 然后经过了一个block+ layer norm 也就是又混合了一词特征 才去的第一个token
         part1_f = part1[:, 0]  # [32, 3072] 取第一个token
 
         # part2
@@ -479,8 +474,7 @@ class VID_TransVideo(nn.Module):
                                                                              part4_f], a_vals  # [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
 
         else:
-            return torch.cat([feat, part1_bn / 4, part2_bn / 4, part3_bn / 4, part4_bn / 4],
-                             dim=1)  # b,13056--3072*4+768
+            return torch.cat([feat, part1_bn / 4, part2_bn / 4, part3_bn / 4, part4_bn / 4], dim=1)  # b,13056--3072*4+768
 
     def load_param(self, trained_path, load=False):
         if not load:
