@@ -7,3 +7,4 @@ matplotlib
 scipy
 torch-ema
 notebook
+torch-geometric

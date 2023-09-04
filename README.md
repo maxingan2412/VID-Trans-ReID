@@ -99,6 +99,18 @@ cosine
 [26:21] CMC curve r1: 0.9295125007629395
 [26:21] CMC: 0.9295, mAP : 0.9165
 
+----用video transformer 但是去掉了a的 attention的结果
+[501:32] Computing CMC and mAP with reranking,
+[501:52] Results ---------- 
+[501:52] mAP: 90.5%
+[501:52] CMC curve r1: 0.9275362491607666
+[501:52] Computing CMC and mAP
+[502:12] Results ---------- 
+[502:12] mAP: 85.9%
+[502:12] CMC curve r1: 0.947299063205719
+[502:12] CMC: 0.9473, mAP : 0.8586
+
+
 
 seq=8效果变差了
 
