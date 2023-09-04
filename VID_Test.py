@@ -162,30 +162,58 @@ def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=21):
 def extract_features(data_loader, model, use_gpu=True, pool='avg'):
     features_list, pids_list, camids_list = [], [], []
     with torch.no_grad():
-        for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
-        #for imgs, pids, camids, _ in tqdm(data_loader):
-            if use_gpu:
-                imgs = imgs.cuda(non_blocking=True)
+        if data_loader.__len__() >= 1980:
+            for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
+            #for imgs, pids, camids, _ in tqdm(data_loader):
+                if use_gpu:
+                    imgs = imgs.cuda(non_blocking=True)
 
-            b, s, c, h, w = imgs.size()
-            features = model(imgs, pids, cam_label=camids)
-            features = features.view(b, -1)
-            if pool == 'avg':
-                features = torch.mean(features, 0)
-            else:
-                features, _ = torch.max(features, 0)
-            features = features.data.cpu()
+                b, s, c, h, w = imgs.size()
+                features = model(imgs, pids, cam_label=camids)
+                features = features.view(b, -1)
+                if pool == 'avg':
+                    features = torch.mean(features, 0)
+                else:
+                    features, _ = torch.max(features, 0)
+                features = features.data.cpu()
 
-            features_list.append(features)
+                features_list.append(features)
 
-            # Ensure pids and camids are iterable (list or tensor) before extending
-            if not isinstance(pids, (list, torch.Tensor)):
-                pids = [pids]
-            if not isinstance(camids, (list, torch.Tensor)):
-                camids = [camids]
+                # Ensure pids and camids are iterable (list or tensor) before extending
+                if not isinstance(pids, (list, torch.Tensor)):
+                    pids = [pids]
+                if not isinstance(camids, (list, torch.Tensor)):
+                    camids = [camids]
 
-            pids_list.extend(pids)
-            camids_list.extend(camids)
+                pids_list.extend(pids)
+                camids_list.extend(camids)
+        else:
+            for batch_idx, data in enumerate(tqdm(data_loader)):
+                imgs, pids, camids = data
+                if use_gpu:
+                    imgs = imgs.cuda(non_blocking=True)
+
+                b, s, c, h, w = imgs.size()
+                features = model(imgs, pids, cam_label=camids)
+                features = features.view(b, -1)
+                if pool == 'avg':
+                    features = torch.mean(features, 0)
+                else:
+                    features, _ = torch.max(features, 0)
+                features = features.data.cpu()
+
+                features_list.append(features)
+
+                # Ensure pids and camids are iterable (list or tensor) before extending
+                if not isinstance(pids, (list, torch.Tensor)):
+                    pids = [pids]
+                if not isinstance(camids, (list, torch.Tensor)):
+                    camids = [camids]
+
+                pids_list.extend(pids)
+                camids_list.extend(camids)
+
+
     #823这里的提取特征是一个tracklets提出来，每一个tracklets对应了一个feature
     features = torch.stack(features_list) # 一个1980场的list 变成  1980 * 13506的tensro
     pids = np.asarray(pids_list) #1980的list 变为array
@@ -255,14 +283,17 @@ if __name__ == '__main__':
         "--model_path", default="", help="pretrained model", type=str)
     parser.add_argument(
         '--batch_size', default=32, type=int, help='batch size of train')
+    parser.add_argument(
+        "--ViT_path", default="jx_vit_base_p16_224-80ecf9dd.pth", help="The name of the vit pth", type=str)
 
     parser.add_argument(
         '--seq_len', default=4, type=int, help='seq len')
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
-    pretrainpath=args.model_path
+    model_resume=args.model_path
     batch_size=args.batch_size
     seq_len=args.seq_len
+    vit_path = args.ViT_path
 
     print("Arguments:")
     for arg in vars(args):
@@ -272,12 +303,12 @@ if __name__ == '__main__':
 
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len)
     #model = VID_Trans(num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth',seq_len=seq_len)
-    model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth',seq_len=seq_len)
+    model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num,pretrainpath=vit_path,seq_len=seq_len)
 
     device = "cuda"
     model=model.to(device)
 
-    checkpoint = torch.load(pretrainpath)
+    checkpoint = torch.load(model_resume)
     model.load_state_dict(checkpoint)
 
 

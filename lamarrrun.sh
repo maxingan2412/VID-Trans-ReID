@@ -2,7 +2,7 @@
 #SBATCH --job-name=vit_noeas_128
 #SBATCH --time=72:00:00
 #SBATCH --gpus=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=48
 #SBATCH --output=out/diff_train-%j.out
 #SBATCH --error=out/diff_train-%j.err
 

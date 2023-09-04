@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
-    pretrained_path = args.ViT_path
+    ViT_path = args.ViT_path
     epochs = args.epochs
     batch_size = args.batch_size
     test_epoches = args.test_epoches
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len) #这里完成了 datloader的组合
 
     # model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path,seq_len=seq_len)
-    model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num, pretrainpath=pretrained_path, seq_len=seq_len)
+    model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num, pretrainpath=ViT_path, seq_len=seq_len)
 
     loss_fun,center_criterion= make_loss( num_classes=num_classes,seq_len=seq_len) # return   loss_func,center_criterion
     optimizer_center = torch.optim.SGD(center_criterion.parameters(), lr= 0.5)

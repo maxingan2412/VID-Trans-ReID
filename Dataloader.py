@@ -70,9 +70,8 @@ def dataloader(Dataset_name,batchsize,seq_len):
             T.RandomCrop([256, 128]),
             T.ToTensor(),
             T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
-            
-            
-        ]) #义了一个数据增强的转换序列 train_transforms，用于在训练数据上进行预处理操作。这些操作有助于提高模型的泛化能力和性能，同时也可以增加数据的多样性。
+        ])
+    #义了一个数据增强的转换序列 train_transforms，用于在训练数据上进行预处理操作。这些操作有助于提高模型的泛化能力和性能，同时也可以增加数据的多样性。
     #T.Compose 是一个转化，不用管里面什么结构 就是已定义了这个转化 然后用的时候
     # image = PIL.Image.open('image.jpg')
     # transformed_image = transform(image)
@@ -95,8 +94,19 @@ def dataloader(Dataset_name,batchsize,seq_len):
    # 这里该bs   823 想办法 把 q g 也弄出来batchsize 这个sampler让数据从 8298组变成了 7532组，假如说这个tracklets少于seqlen就不要了，所以变成了7532 / bs = loader_len
     train_loader = DataLoader(dataset=train_set, batch_size=batchsize,sampler=RandomIdentitySampler(data_source=dataset.train, batch_size=batchsize,num_instances=4),num_workers=4, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
   #q g 基本没处理  比如q 有1980长度，其中每个元素是一个tracklets，tracklets里面的图片数量就是原始的数量，大小不一，for循环出来是个四元组 img pid camid img_path
+
+    ######原论文的方法 dense 必须bs=1
     q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='dense', transform=val_transforms)
+
+    #新方法
+    # q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='random', transform=val_transforms)
+    # g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='random', transform=val_transforms)
+    #
+    # q_val_set = DataLoader(q_val_set, batch_size=batchsize, num_workers=4)
+    # g_val_set = DataLoader(g_val_set, batch_size=batchsize, num_workers=4)
+
+
 
     #q_val_set = DataLoader(q_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
     #g_val_set = DataLoader(g_val_set, batch_size=4,num_workers=4,collate_fn = custom_collate_fn)
@@ -321,7 +331,7 @@ class VideoDataset_inderase(Dataset):
     def __init__(self, dataset, seq_len=15, sample='evenly', transform=None , max_length=40):
         self.dataset = dataset # list 8298. 里面三元组 图片路径，pid，camid
         self.seq_len = seq_len # 4
-        self.sample = sample # 'intelligent'
+        self.sample = sample   # 'intelligent'
         self.transform = transform # [Resize(size=[256, 128], interpolation=bicubic), RandomHorizontalFlip(p=0.5), Pad(padding=10, fill=0, padding_mode=constant), RandomCrop(size=(256, 128), padding=None), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]
         self.max_length = max_length # 40
         self.erase = RandomErasing3(probability=0.5, mean=[0.485, 0.456, 0.406])
