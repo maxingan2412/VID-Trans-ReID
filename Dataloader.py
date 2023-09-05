@@ -341,7 +341,7 @@ class VideoDataset_inderase(Dataset):
         self.sample = sample   # 'intelligent'
         self.transform = transform # [Resize(size=[256, 128], interpolation=bicubic), RandomHorizontalFlip(p=0.5), Pad(padding=10, fill=0, padding_mode=constant), RandomCrop(size=(256, 128), padding=None), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]
         self.max_length = max_length # 40
-        self.erase = RandomErasing3(probability=0.0, mean=[0.485, 0.456, 0.406])
+        self.erase = RandomErasing3(probability=0.5, mean=[0.485, 0.456, 0.406])
 
     def __len__(self):
         return len(self.dataset)

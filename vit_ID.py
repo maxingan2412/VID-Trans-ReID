@@ -381,14 +381,33 @@ class TransReIDVideo(nn.Module):
         # 823测试的时候不一定是 128 是随着 tracklet长度变化而变化的，不管b是不是固定的 patch_embed不会改变b
         # x = self.patch_embed(x)  # [128,3,256,128] -> [128,128,768] 是这样的 转化的第一位是bs所以还是128 不变，最后一位是embed_dim 所以是768，中间的就是patch数量，计算得到 128
 
+        cls_token1=self.cls_token.expand(B, -1, -1)
+        cls_token2=self.cls_token.expand(B, -1, -1)
+        cls_token3=self.cls_token.expand(B, -1, -1)
+        cls_token4=self.cls_token.expand(B, -1, -1)
+
+
         frametokenlist = []
         for i in range(x.size(1)):
             singleframetoken = self.patch_embed(x[:, i])
             frametokenlist.append(singleframetoken)
         x = torch.concat(frametokenlist, 1)
 
+        part1 = frametokenlist[0]
+        part2 = frametokenlist[1]
+        part3 = frametokenlist[2]
+        part4 = frametokenlist[3]
+
+
+
         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks 823 b 1 768
         x = torch.cat((cls_tokens, x), dim=1)
+        x1 = torch.cat((cls_token1, part1), dim=1)
+        x2 = torch.cat((cls_token2, part2), dim=1)
+        x3 = torch.cat((cls_token3, part3), dim=1)
+        x4 = torch.cat((cls_token4, part4), dim=1)
+
+
 
         # self.pos_embed = self.pos_embed[:,:129]
         #aaa = self.pos_embed[:,:-1,:]
@@ -398,13 +417,31 @@ class TransReIDVideo(nn.Module):
         x = x + final_pos_embed + self.cam_lambda * self.Cam[camera_id]  # self.Cam[camera_id]就是我们初始化了6中相机id的参数，这里呢我们有了这些b*seq个样本的图像，也就有了这么多的图片，我们按照他们的id分别载入这些参数
         x = self.pos_drop(x)
 
+        x1 = x1 + self.pos_embed + self.cam_lambda * self.Cam[camera_id]
+        x1 = self.pos_drop(x1)
+
+        x2 = x2 + self.pos_embed + self.cam_lambda * self.Cam[camera_id]
+        x2 = self.pos_drop(x2)
+
+        x3 = x3 + self.pos_embed + self.cam_lambda * self.Cam[camera_id]
+        x3 = self.pos_drop(x3)
+
+        x4 = x4 + self.pos_embed + self.cam_lambda * self.Cam[camera_id]
+        x4 = self.pos_drop(x4)
+
         for blk in self.blocks[:-1]:
             x = blk(x)
-        return x
+            x1 = blk(x1)
+            x2 = blk(x2)
+            x3 = blk(x3)
+            x4 = blk(x4)
+        return x, x1, x2, x3, x4
 
     def forward(self, x, cam_label=None):
-        x = self.forward_features(x, cam_label)
-        return x
+        #x = self.forward_features(x, cam_label)
+        #return x
+        x, x1, x2, x3, x4 = self.forward_features(x, cam_label)
+        return x, x1, x2, x3, x4
 
     def load_param(self, model_path, load=False):
         if not load:

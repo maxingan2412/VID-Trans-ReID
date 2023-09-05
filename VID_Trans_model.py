@@ -314,7 +314,7 @@ class VID_TransVideo(nn.Module):
 
         state_dict = torch.load(pretrainpath,
                                 map_location='cpu')  # jx 这个是pretained vit，state_dict是一个字典，里面包括模型的各层的一些参数,map是加载的位置
-        self.base.load_param(state_dict, load=True)  # 给模型加载这些参数
+        self.base.load_param(state_dict, load=True)  # 给base模型 也就是transreid加载预训练的参数。
 
         # global stream
         block = self.base.blocks[-1]  # 拿blocks的最后一个block
@@ -393,7 +393,9 @@ class VID_TransVideo(nn.Module):
         # 32 4 3 256 128  ---->  128 3 256 128
         #x = x.view(x.size(0) * x.size(1), x.size(2), x.size(3), x.size(4))  # [32,4,3,256,128] --> [128,3,256,128]
         cam_label = cam_label[::t]
-        features = self.base(x,cam_label=cam_label)  # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
+        #features = self.base(x,cam_label=cam_label)  # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
+        features,feature1,feature2,feature3,feature4 = self.base(x, cam_label=cam_label)
+
 
         # concat_features = []
         # for i in range(t):
@@ -405,8 +407,47 @@ class VID_TransVideo(nn.Module):
 
         # 其实global的这个attention 它不是一个关于时间或者关于tracklet的attetnion  而是把768这个高维压缩， 得到的[32,4]比如 其中一行一列 表示的是 再第一个tracklet的 t1的特征。 后面用这个特征去加权 正常768这个特征。
         # global branch gb的attetnion就是论文中的 temporal spatial attention
+        # b1_feat = self.b1(features)  # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
+        # global_feat = b1_feat[:, 0]  # [128, 768] 取第一个token 当做global feature
+
         b1_feat = self.b1(features)  # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
+
+        p1_feat = self.b1(feature1)
+        p2_feat = self.b1(feature2)
+        p3_feat = self.b1(feature3)
+        p4_feat = self.b1(feature4)
+
+
         global_feat = b1_feat[:, 0]  # [128, 768] 取第一个token 当做global feature
+        p1_feat = p1_feat[:, 0]
+        p2_feat = p2_feat[:, 0]
+        p3_feat = p3_feat[:, 0]
+        p4_feat = p4_feat[:, 0]
+
+        p1_feat = p1_feat.unsqueeze(dim=2).unsqueeze(dim=3)
+        p2_feat = p2_feat.unsqueeze(dim=2).unsqueeze(dim=3)
+        p3_feat = p3_feat.unsqueeze(dim=2).unsqueeze(dim=3)
+        p4_feat = p4_feat.unsqueeze(dim=2).unsqueeze(dim=3)
+
+        a1 = F.relu(self.attention_conv(p1_feat))
+        a2 = F.relu(self.attention_conv(p2_feat))
+        a3 = F.relu(self.attention_conv(p3_feat))
+        a4 = F.relu(self.attention_conv(p4_feat))
+
+        a1 = a1.squeeze(-1).squeeze(-1)
+        a2 = a2.squeeze(-1).squeeze(-1)
+        a3 = a3.squeeze(-1).squeeze(-1)
+        a4 = a4.squeeze(-1).squeeze(-1)
+
+        aa = torch.stack((a1,a2,a3,a4),dim=1)
+        aa = aa.permute(0,2,1)
+        aa = F.relu(self.attention_tconv(aa))
+        aa = aa.squeeze()
+        a_vals = aa
+
+
+
+
 
         # global_feat = global_feat.unsqueeze(dim=2)  # [128, 768, 1] tensor
         # global_feat = global_feat.unsqueeze(dim=3)  # [128, 768, 1, 1] tensor
@@ -471,7 +512,7 @@ class VID_TransVideo(nn.Module):
             Local_ID4 = self.classifier_4(part4_bn)  # [32, 3072] ---> [32, 625]
             # loss_id ,center
             return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4], [global_feat, part1_f, part2_f, part3_f,
-                                                                             part4_f]  # [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
+                                                                             part4_f],a_vals  # [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
 
         else:
             return torch.cat([feat, part1_bn / 4, part2_bn / 4, part3_bn / 4, part4_bn / 4], dim=1)  # b,13056--3072*4+768
