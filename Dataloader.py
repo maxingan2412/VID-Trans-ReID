@@ -67,7 +67,7 @@ def bubian_collate(batch):
 #     camids_batch = torch.tensor(camids, dtype=torch.int64)
 #     return torch.stack(imgs, dim=0), pids, camids_batch,  img_paths
 
-def dataloader(Dataset_name,batchsize,seq_len):
+def dataloader(Dataset_name,batchsize,seq_len,num_workers=8):
     train_transforms = T.Compose([
             T.Resize([256, 128], interpolation=3),
             T.RandomHorizontalFlip(p=0.5),
@@ -97,7 +97,7 @@ def dataloader(Dataset_name,batchsize,seq_len):
     view_num = dataset.num_train_vids
 
    # 这里该bs   823 想办法 把 q g 也弄出来batchsize 这个sampler让数据从 8298组变成了 7532组，假如说这个tracklets少于seqlen就不要了，所以变成了7532 / bs = loader_len
-    train_loader = DataLoader(dataset=train_set, batch_size=batchsize,sampler=RandomIdentitySampler(data_source=dataset.train, batch_size=batchsize,num_instances=4),num_workers=8, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
+    train_loader = DataLoader(dataset=train_set, batch_size=batchsize,sampler=RandomIdentitySampler(data_source=dataset.train, batch_size=batchsize,num_instances=4),num_workers=num_workers, collate_fn=train_collate_fn) #这里定义了bs 这段代码使用了 PyTorch 中的 DataLoader 类，用于构建一个用于训练的数据加载器。DataLoader 提供了一种简便的方式来加载和处理训练数据，它可以在训练过程中自动进行批量化、随机化等操作。
   #q g 基本没处理  比如q 有1980长度，其中每个元素是一个tracklets，tracklets里面的图片数量就是原始的数量，大小不一，for循环出来是个四元组 img pid camid img_path
 
     ######原论文的方法 dense 必须bs=1
@@ -108,8 +108,8 @@ def dataloader(Dataset_name,batchsize,seq_len):
     q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='dense', transform=val_transforms)
 
-    q_val_set = DataLoader(q_val_set, batch_size=1, num_workers=8,collate_fn=bubian_collate)
-    g_val_set = DataLoader(g_val_set, batch_size=1, num_workers=8,collate_fn=bubian_collate)
+    q_val_set = DataLoader(q_val_set, batch_size=1, num_workers=num_workers,collate_fn=bubian_collate)
+    g_val_set = DataLoader(g_val_set, batch_size=1, num_workers=num_workers,collate_fn=bubian_collate)
 
 
 
