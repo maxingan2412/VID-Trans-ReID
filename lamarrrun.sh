@@ -1,10 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=vit_48_noeas_128
+#SBATCH --job-name=vit_48_bs_100
 #SBATCH --time=72:00:00
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=48
-#SBATCH --output=out/vit_48_noeas_128_diff_train-%j.out
-#SBATCH --error=out/vit_48_noeas_128_diff_train-%j.err
+#SBATCH --output=out/vit_48_bs_100-%j.out
+#SBATCH --error=out/vit_48_bs_100-%j.err
+
 
 # 获取当前日期和时间
 CURRENT_TIME=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -44,9 +45,9 @@ function execute_and_log {
 (sleep 300 && nvidia-smi) >> "$LOG_FILE" 2>&1 &
 
 # 执行命令
-echo "setting : bs 128 epoch 120" >> "$LOG_FILE"
+echo "setting : bs 100 epoch 120" >> "$LOG_FILE"
 execute_and_log "nvidia-smi"
-execute_and_log "/home/ma1/anaconda3/envs/vitnew/bin/python -u VID_Trans_ReID.py --num_workers 48 --Dataset_name Mars --test_epoches 30 --batch_size 128 --ViT_path jx_vit_base_p16_224-80ecf9dd.pth --epochs 120"
+execute_and_log "/home/ma1/anaconda3/envs/vitnew/bin/python -u VID_Trans_ReID.py --num_workers 48 --Dataset_name Mars --test_epoches 40 --batch_size 100 --ViT_path jx_vit_base_p16_224-80ecf9dd.pth --epochs 120"
 
 # 记录结束时间
 echo "Experiment ended at $(date +"%Y-%m-%d %H:%M:%S")" >> "$LOG_FILE"
