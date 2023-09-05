@@ -319,12 +319,15 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--seq_len', default=4, type=int, help='seq len')
+    parser.add_argument(
+        '--num_workers', default=8, type=int, help='num workers')
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     model_path=args.model_path
     batch_size=args.batch_size
     seq_len=args.seq_len
     ViT_path = args.ViT_path
+    num_workers = args.num_workers
 
     print("Arguments:")
     for arg in vars(args):
@@ -332,7 +335,7 @@ if __name__ == '__main__':
 
 
 
-    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len)
+    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len,num_workers)
     #model = VID_Trans(num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth',seq_len=seq_len)
     model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num,pretrainpath=ViT_path,seq_len=seq_len)
 

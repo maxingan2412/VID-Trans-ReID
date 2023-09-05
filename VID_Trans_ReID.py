@@ -101,6 +101,8 @@ if __name__ == '__main__':
         '--test_epoches', default=30, type=int, help='e.g if setting to 30 means we test the model every 30 epoches')
     parser.add_argument(
         '--seq_len', default=4, type=int, help='seq len')
+    parser.add_argument(
+        '--num_workers', default=8, type=int, help='num workers')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
@@ -109,6 +111,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     test_epoches = args.test_epoches
     seq_len = args.seq_len
+    num_workers = args.num_workers
 
 
     print("Arguments:")
@@ -124,7 +127,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
     #举例trainloader 四元组 分别是一个batch的tensor size是 bs 4,3,256,128  bs大小的tesnor 代表pid  bs*4的tesnor 代表camerid bs*4的tensor 代表labels2，这个是噪声注入的标记，代表每张照片是否注入噪声
-    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len) #这里完成了 datloader的组合
+    train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len,num_workers) #这里完成了 datloader的组合
 
     # model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=pretrained_path,seq_len=seq_len)
     model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num, pretrainpath=ViT_path, seq_len=seq_len)
@@ -200,7 +203,7 @@ if __name__ == '__main__':
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize() # 这是一个CUDA操作同步指令。当你执行一个CUDA操作时，例如GPU上的张量操作，它通常是异步的。这意味着CPU代码会继续执行，而不等待GPU操作完成。这条指令会使CPU等待直到所有CUDA流中的任务都完成。在性能分析、时间测量或确保特定操作前后的数据一致性时，这很有用
-            if (Epoch_n + 1) % 50 == 0: #822 train_loader bs越大 这个就越小，比如 bs128的时候从log中看出这个是59，64的时候是118
+            if (Epoch_n + 1) % 10 == 0: #822 train_loader bs越大 这个就越小，比如 bs128的时候从log中看出这个是59，64的时候是118
                 print("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, Acc: {:.3f}, Base Lr: {:.2e}"
                             .format(epoch, (Epoch_n + 1), len(train_loader),
                                     loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
