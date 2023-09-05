@@ -161,7 +161,7 @@ def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=21):
 #823 测试的时候每次一个tracklets的数据，所以有长有短，这里面的b, s, c, h, w 中的b其实是指的是tracklets的长度
 def extract_features(data_loader, model, use_gpu=True, pool='avg'):
     features_list, pids_list, camids_list = [], [], []
-    with torch.no_grad():
+    with (torch.no_grad()):
         if data_loader.__len__() >= 1980:
             for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
             #for imgs, pids, camids, _ in tqdm(data_loader):
@@ -187,6 +187,7 @@ def extract_features(data_loader, model, use_gpu=True, pool='avg'):
 
                 pids_list.extend(pids)
                 camids_list.extend(camids)
+
         else:
             for batch_idx, data in enumerate(tqdm(data_loader)):
                 imgs, pids, camids = data
@@ -290,10 +291,10 @@ if __name__ == '__main__':
         '--seq_len', default=4, type=int, help='seq len')
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
-    model_resume=args.model_path
+    model_path=args.model_path
     batch_size=args.batch_size
     seq_len=args.seq_len
-    vit_path = args.ViT_path
+    ViT_path = args.ViT_path
 
     print("Arguments:")
     for arg in vars(args):
@@ -303,12 +304,12 @@ if __name__ == '__main__':
 
     train_loader,  num_query, num_classes, camera_num, view_num,q_val_set,g_val_set = dataloader(Dataset_name,batch_size,seq_len)
     #model = VID_Trans(num_classes=num_classes, camera_num=camera_num,pretrainpath='/home/ma1/work/VID-Trans-ReID/jx_vit_base_p16_224-80ecf9dd.pth',seq_len=seq_len)
-    model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num,pretrainpath=vit_path,seq_len=seq_len)
+    model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num,pretrainpath=ViT_path,seq_len=seq_len)
 
     device = "cuda"
     model=model.to(device)
 
-    checkpoint = torch.load(model_resume)
+    checkpoint = torch.load(model_path)
     model.load_state_dict(checkpoint)
 
 
