@@ -54,6 +54,11 @@ def custom_collate_fn(batch):
     return torch.stack(imgs, dim=0), pids, camids_padded, ass
 
 
+def bubian_collate(batch):
+    # imgs, pids, camids, img_path = zip(*batch)
+    #return imgs, pids, camids, img_path
+    return batch
+
 
 # def val_collate_fn(batch):
 #
@@ -96,15 +101,15 @@ def dataloader(Dataset_name,batchsize,seq_len):
   #q g 基本没处理  比如q 有1980长度，其中每个元素是一个tracklets，tracklets里面的图片数量就是原始的数量，大小不一，for循环出来是个四元组 img pid camid img_path
 
     ######原论文的方法 dense 必须bs=1
+    # q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='dense', transform=val_transforms)
+    # g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='dense', transform=val_transforms)
+
+    #新方法
     q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='dense', transform=val_transforms)
     g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='dense', transform=val_transforms)
 
-    #新方法
-    # q_val_set = VideoDataset(dataset=dataset.query, seq_len=seq_len, sample='random', transform=val_transforms)
-    # g_val_set = VideoDataset(dataset=dataset.gallery, seq_len=seq_len, sample='random', transform=val_transforms)
-    #
-    # q_val_set = DataLoader(q_val_set, batch_size=batchsize, num_workers=4)
-    # g_val_set = DataLoader(g_val_set, batch_size=batchsize, num_workers=4)
+    q_val_set = DataLoader(q_val_set, batch_size=1, num_workers=8,collate_fn=bubian_collate)
+    g_val_set = DataLoader(g_val_set, batch_size=1, num_workers=8,collate_fn=bubian_collate)
 
 
 
@@ -206,6 +211,8 @@ class VideoDataset(Dataset):
             """
             Sample all frames in a video into a list of clips, each clip contains seq_len frames, batch_size needs to be set to 1.
             This sampling strategy is used in test phase.
+            生成则是  输入就是一个imagpath，长度就是这个tracklets下图片的数量。如果能被seq_len整除，那么久类似于 [[0 1 2 3],[4 5 6 7]]如果不能的话 就重复最后的元素 到seq_len的长度
+            
             """
             # import pdb
             # pdb.set_trace()

@@ -163,8 +163,10 @@ def extract_features(data_loader, model, use_gpu=True, pool='avg'):
     features_list, pids_list, camids_list = [], [], []
     with (torch.no_grad()):
         if data_loader.__len__() >= 1980:
-            for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
-            #for imgs, pids, camids, _ in tqdm(data_loader):
+            for batch_idx, data in enumerate(tqdm(data_loader)):
+                data = data[0]
+                imgs, pids, camids,_ = data
+
                 if use_gpu:
                     imgs = imgs.cuda(non_blocking=True)
 
@@ -187,6 +189,34 @@ def extract_features(data_loader, model, use_gpu=True, pool='avg'):
 
                 pids_list.extend(pids)
                 camids_list.extend(camids)
+
+
+
+
+            # for batch_idx, (imgs, pids, camids, _) in enumerate(tqdm(data_loader)):
+            # #for imgs, pids, camids, _ in tqdm(data_loader):
+            #     if use_gpu:
+            #         imgs = imgs.cuda(non_blocking=True)
+            #
+            #     b, s, c, h, w = imgs.size()
+            #     features = model(imgs, pids, cam_label=camids)
+            #     features = features.view(b, -1)
+            #     if pool == 'avg':
+            #         features = torch.mean(features, 0)
+            #     else:
+            #         features, _ = torch.max(features, 0)
+            #     features = features.data.cpu()
+            #
+            #     features_list.append(features)
+            #
+            #     # Ensure pids and camids are iterable (list or tensor) before extending
+            #     if not isinstance(pids, (list, torch.Tensor)):
+            #         pids = [pids]
+            #     if not isinstance(camids, (list, torch.Tensor)):
+            #         camids = [camids]
+            #
+            #     pids_list.extend(pids)
+            #     camids_list.extend(camids)
 
         else:
             for batch_idx, data in enumerate(tqdm(data_loader)):
