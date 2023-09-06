@@ -110,6 +110,27 @@ cosine
 [502:12] CMC curve r1: 0.947299063205719
 [502:12] CMC: 0.9473, mAP : 0.8586
 
+[322:24] Computing CMC and mAP with reranking,
+[322:44] Results ---------- 
+[322:44] mAP: 90.3%
+[322:44] CMC curve r1: 0.9288537502288818
+[322:44] Computing CMC and mAP
+[323:04] Results ---------- 
+[323:04] mAP: 84.4%
+[323:04] CMC curve r1: 0.9413702487945557
+[323:04] CMC: 0.9414, mAP : 0.8444
+
+
+-----用video transformer 重新定义了a的 attention的结果
+[300:44] Computing CMC and mAP with reranking,
+[301:05] Results ---------- 
+[301:05] mAP: 90.3%
+[301:05] CMC curve r1: 0.9301712512969971
+[301:05] Computing CMC and mAP
+[301:27] Results ---------- 
+[301:27] mAP: 85.3%
+[301:27] CMC curve r1: 0.9433465003967285
+[301:27] CMC: 0.9433, mAP : 0.8527
 
 
 seq=8效果变差了
