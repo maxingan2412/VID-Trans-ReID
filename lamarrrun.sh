@@ -6,6 +6,12 @@
 #SBATCH --output=out/vit_48_bs_100-%j.out
 #SBATCH --error=out/vit_48_bs_100-%j.err
 
+# 检查并创建输出目录
+OUT_DIR="out"
+if [ ! -d "$OUT_DIR" ]; then
+    mkdir -p "$OUT_DIR"
+fi
+
 
 # 获取当前日期和时间
 CURRENT_TIME=$(date +"%Y-%m-%d_%H-%M-%S")

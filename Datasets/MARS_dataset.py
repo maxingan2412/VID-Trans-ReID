@@ -99,6 +99,12 @@ class Mars(object):
         print("  number of images per tracklet: {} ~ {}, average {:.1f}".format(min_num, max_num, avg_num))
         print("  ------------------------------")
 
+        train = self.transform(train)
+        query = self.transform(query)
+        gallery = self.transform(gallery)
+
+
+
         # self.train_videos = video
         self.train = train
         self.query = query
@@ -113,6 +119,29 @@ class Mars(object):
         self.num_train_vids=num_train_tracklets
         self.num_query_vids=num_query_tracklets
         self.num_gallery_vids=num_gallery_tracklets
+
+
+
+
+        ######### soldier测试 转换为 market1501的格式
+
+        # self.train = self.transform(self.train)
+        # self.query = self.transform(self.query)
+        # self.gallery = self.transform(self.gallery)
+
+    def transform(self,input_list):
+        result = []
+
+        # 遍历列表中的每个元组
+        for item in input_list:
+            # 提取.jpg文件路径的元组和其他元素
+            jpgs, *others = item
+            # 对于每个.jpg文件路径，创建一个新的元组，添加额外的1，并添加到结果列表中
+            for jpg in jpgs:
+                result.append((jpg, *others, 1))
+
+        return result
+
     def _check_before_run(self):
         """Check if all files are available before going deeper"""
         if not osp.exists(self.root):
