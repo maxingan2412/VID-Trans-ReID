@@ -99,9 +99,10 @@ class Mars(object):
         print("  number of images per tracklet: {} ~ {}, average {:.1f}".format(min_num, max_num, avg_num))
         print("  ------------------------------")
 
-        train = self.transform(train)
-        query = self.transform(query)
-        gallery = self.transform(gallery)
+        #这里是把数据集从video的形式转换成图片的形式
+        # train = self.transform(train)
+        # query = self.transform(query)
+        # gallery = self.transform(gallery)
 
 
 

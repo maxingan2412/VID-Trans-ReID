@@ -281,7 +281,40 @@ class TransReID(nn.Module):
         x = self.forward_features(x, cam_label)
         return x
 
-    def load_param(self, model_path,load=False):
+    def load_param(self, model_path, load=False):
+        if not load:
+            param_dict = torch.load(model_path, map_location='cpu')
+        else:
+            param_dict = model_path
+        if 'model' in param_dict:
+            param_dict = param_dict['model']
+        if 'state_dict' in param_dict:
+            param_dict = param_dict['state_dict']
+        for k, v in param_dict.items():
+            if 'head' in k or 'dist' in k:
+                continue
+            if 'patch_embed.proj.weight' in k and len(v.shape) < 4:
+                # For old models that I trained prior to conv based patchification
+                O, I, H, W = self.patch_embed.proj.weight.shape
+                v = v.reshape(O, -1, H, W)
+            elif k == 'pos_embed' and v.shape != self.pos_embed.shape:
+                # To resize pos embedding when using model at different size from pretrained weights
+                if 'distilled' in model_path:
+                    print('distill need to choose right cls token in the pth')
+                    v = torch.cat([v[:, 0:1], v[:, 2:]], dim=1)
+                v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
+            try:
+                if k in self.state_dict():
+                    self.state_dict()[k].copy_(v)
+                else:
+                    print('Skipping loading of {} because it does not exist in the model.'.format(k))
+            except:
+                print('===========================ERROR=========================')
+                print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape,
+                                                                                                self.state_dict()[
+                                                                                                    k].shape))
+
+    def load_param_old(self, model_path,load=False):
         if not load:
             param_dict = torch.load(model_path, map_location='cpu')
         else:

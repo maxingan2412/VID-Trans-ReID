@@ -79,6 +79,19 @@ If you are making use of this work in any way, you must please reference the fol
  url = {https://breckon.org/toby/publications/papers/alsehaim22vidtransreid.pdf}
 }
 ```
+使用vitnew环境使用 论文给出的模型 测试mars的结果
+Computing CMC and mAP with reranking,
+Results ---------- 
+mAP: 91.9%
+CMC curve r1: 0.9295125007629395
+Computing CMC and mAP
+Results ---------- 
+mAP: 89.2%
+CMC curve r1: 0.9591568112373352
+CMC: 0.9592, mAP : 0.8921
+比论文报告的结果差了一点,而且和环境版本无关
+
+
 
 
 python -u VID_Test.py --Dataset_name 'Mars' --model_path 'Transformer.pth'
