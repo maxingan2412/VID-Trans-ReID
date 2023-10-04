@@ -4,6 +4,48 @@ from loss.triplet_loss import TripletLoss
 from loss.center_loss import CenterLoss
 
 
+class LossMaker:
+    def __init__(self, num_classes):
+        self.feat_dim = 768
+        self.center_criterion = CenterLoss(num_classes=num_classes, feat_dim=self.feat_dim, use_gpu=True)
+        self.center_criterion2 = CenterLoss(num_classes=num_classes, feat_dim=3072, use_gpu=True)
+        self.triplet = TripletLoss()
+        self.xent = CrossEntropyLabelSmooth(num_classes=num_classes)
+
+    def compute_id_loss(self, score, target):
+        if isinstance(score, list):
+            loss_list = [self.xent(scor, target) for scor in score[1:]]
+            avg_loss = sum(loss_list) / len(loss_list)
+            return 0.25 * avg_loss + 0.75 * self.xent(score[0], target)
+        else:
+            return self.xent(score, target)
+
+    def compute_triplet_loss(self, feat, target):
+        if isinstance(feat, list):
+            loss_list = [self.triplet(feats, target)[0] for feats in feat[1:]]
+            avg_loss = sum(loss_list) / len(loss_list)
+            return 0.25 * avg_loss + 0.75 * self.triplet(feat[0], target)[0]
+        else:
+            return self.triplet(feat, target)[0]
+
+    def compute_center(self, feat, target):
+        if isinstance(feat, list):
+            center1 = self.center_criterion(feat[0], target)
+            center2_list = [self.center_criterion2(feats, target) for feats in feat[1:]]
+            avg_center2 = sum(center2_list) / len(center2_list)
+            return 0.25 * avg_center2 + 0.75 * center1
+        else:
+            return self.center_criterion(feat, target)
+
+    def loss_func(self, score, feat, target, target_cam):
+        id_loss = self.compute_id_loss(score, target)
+        tri_loss = self.compute_triplet_loss(feat, target)
+        center = self.compute_center(feat, target)
+        return id_loss + tri_loss, center
+
+
+
+
 def make_loss(num_classes):
     feat_dim = 768
     center_criterion = CenterLoss(num_classes=num_classes, feat_dim=feat_dim, use_gpu=True)  # center loss

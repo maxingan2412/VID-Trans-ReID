@@ -151,3 +151,5 @@ seq=8效果变差了
 aug15 
 训练 
 ./experiment.sh python -u VID_Trans_ReID.py --Dataset_name 'Mars' --ViT_path 'jx_vit_base_p16_224-80ecf9dd.pth'
+新的使用方法
+./script_name.sh training_log python train.py

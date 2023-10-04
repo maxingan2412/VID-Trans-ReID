@@ -2,7 +2,7 @@ from Dataloader import dataloader
 from VID_Trans_model import VID_Trans,VID_TransVideo
 
 
-from Loss_fun import make_loss
+from Loss_fun import LossMaker
 
 import random
 import torch
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--Dataset_name", default="", help="The name of the DataSet", type=str)
     parser.add_argument(
-        "--Pretrained_path", default="", help="The name of the vit pth", type=str)
+        "--Pretrained_path", default="jx_vit_base_p16_224-80ecf9dd.pth", help="The name of the vit pth", type=str)
     parser.add_argument(
         '--epochs', default=120, type=int, help='number of total epochs to run')
     parser.add_argument(
@@ -131,7 +131,13 @@ if __name__ == '__main__':
 
     model = VID_Trans( num_classes=num_classes, camera_num=camera_num,pretrainpath=Pretrained_path,seq_len=seq_len)
     #model = VID_TransVideo(num_classes=num_classes, camera_num=camera_num, pretrainpath=ViT_path, seq_len=seq_len)
-    loss_fun, center_criterion = make_loss(num_classes=num_classes)
+    #loss_fun, center_criterion = make_loss(num_classes=num_classes)
+
+    loss_maker = LossMaker(num_classes=num_classes)
+    #loss_fun = loss_maker.loss_func
+    center_criterion = loss_maker.center_criterion
+
+
     # loss_fun,center_criterion= make_loss( num_classes=num_classes,seq_len=seq_len) # return   loss_func,center_criterion
     optimizer_center = torch.optim.SGD(center_criterion.parameters(), lr= 0.5)
     
@@ -178,8 +184,9 @@ if __name__ == '__main__':
                 attn_noise  = a_vals * labels2 # 俩都是 32 4，
                 attn_loss = attn_noise.sum(1).mean() #是一个值了 tensor(1.3899, device='cuda:0', grad_fn=<MeanBackward0>)
                 # ID_LOSS+ TRI_LOSS, center
-                loss_id ,center= loss_fun(score, feat, pid, target_cam) # 14 2000+
-                loss=loss_id+ 0.0005*center +attn_loss
+                #loss_id ,center= loss_fun(score, feat, pid, target_cam) # 14 2000+
+                loss_id ,center = loss_maker.loss_func(score, feat, pid, target_cam)
+                loss = loss_id+ 0.0005*center +attn_loss
                 #loss = loss_id + 0.0005 * center
             scaler.scale(loss).backward() #这里是反向传播
 

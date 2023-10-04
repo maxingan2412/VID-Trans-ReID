@@ -132,6 +132,8 @@ class VID_Trans(nn.Module):
         
           
         state_dict = torch.load(pretrainpath, map_location='cpu') # jx 这个是pretained vit，state_dict是一个字典，里面包括模型的各层的一些参数,map是加载的位置
+        state_dict_imagenet = torch.load('jx_vit_base_p16_224-80ecf9dd.pth', map_location='cpu')
+        self.base.load_param(state_dict_imagenet,load=True) #给模型加载这些参数
         self.base.load_param(state_dict,load=True) #给模型加载这些参数
         
        
@@ -208,7 +210,7 @@ class VID_Trans(nn.Module):
     def forward(self, x, label=None, cam_label= None, view_label=None):  # label is unused if self.cos_layer == 'no'
         b=x.size(0) # batch size 32
         t=x.size(1) # seq 4
-        # 32 4 3 256 128  ---->  128 3 256 128
+        # 32 4 3 256 128  ---->  128 3 256 128 #可以理解为变成了图片的格式，方便提取feature
         x = x.view(x.size(0)*x.size(1), x.size(2), x.size(3), x.size(4)) #[32,4,3,256,128] --> [128,3,256,128]
         features = self.base(x, cam_label=cam_label) # 128 129 768，这个就是vit在没有扔到mlp fc之前的特征。
 

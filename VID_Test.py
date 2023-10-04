@@ -2,7 +2,7 @@ from Dataloader import dataloader
 from VID_Trans_model import VID_Trans,VID_TransVideo
 
 
-from Loss_fun import make_loss
+#from Loss_fun import make_loss
 import random
 import torch
 import numpy as np

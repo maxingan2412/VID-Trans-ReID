@@ -1,5 +1,13 @@
 #!/bin/bash
 
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 <log_filename_without_extension> [command_to_run ...]"
+    exit 1
+fi
+
+LOG_FILENAME="$1"
+shift
+
 # 获取当前日期和时间
 CURRENT_TIME=$(date +"%Y-%m-%d_%H-%M-%S")
 
@@ -7,7 +15,7 @@ CURRENT_TIME=$(date +"%Y-%m-%d_%H-%M-%S")
 START_SECONDS=$(date +%s)
 
 # 设置日志文件路径
-LOG_FILE="jilulog/experiment_$CURRENT_TIME.txt"
+LOG_FILE="jilulog/${LOG_FILENAME}_$CURRENT_TIME.txt"
 
 # 检查并创建日志文件目录
 LOG_DIR=$(dirname "$LOG_FILE")
