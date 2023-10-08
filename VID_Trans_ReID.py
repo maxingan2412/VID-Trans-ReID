@@ -179,13 +179,14 @@ if __name__ == '__main__':
                 # [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
                 score, feat ,a_vals= model(img, pid, cam_label=target_cam) #这里是模型的前向传播 score是一个list 长度是5，元素是 glbaol和local的特征 维度是 32 625
                 #score, feat = model(img, pid, cam_label=target_cam)
+                loss_id, center = loss_maker.loss_func(score, feat, pid, target_cam)
 
                 labels2=labels2.to(device)
                 attn_noise  = a_vals * labels2 # 俩都是 32 4，
                 attn_loss = attn_noise.sum(1).mean() #是一个值了 tensor(1.3899, device='cuda:0', grad_fn=<MeanBackward0>)
                 # ID_LOSS+ TRI_LOSS, center
                 #loss_id ,center= loss_fun(score, feat, pid, target_cam) # 14 2000+
-                loss_id ,center = loss_maker.loss_func(score, feat, pid, target_cam)
+                # loss_id ,center = loss_maker.loss_func(score, feat, pid, target_cam)
                 loss = loss_id+ 0.0005*center +attn_loss
                 #loss = loss_id + 0.0005 * center
             scaler.scale(loss).backward() #这里是反向传播

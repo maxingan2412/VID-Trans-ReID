@@ -146,6 +146,27 @@ cosine
 [301:27] CMC: 0.9433, mAP : 0.8527
 
 
+--swinmars 基本沿用swin结果
+
+mAP: 92.5%
+CMC curve r1: 0.9446640610694885
+Computing CMC and mAP
+Results ---------- 
+mAP: 91.6%
+CMC curve r1: 0.9631093740463257
+CMC: 0.9631, mAP : 0.9164
+
+--使用randomeasing3
+mAP: 92.2%
+CMC curve r1: 0.9387351870536804
+Computing CMC and mAP
+Results ----------
+mAP: 91.5%
+CMC curve r1: 0.9611330628395081
+CMC: 0.9611, mAP : 0.9149
+
+
+
 seq=8效果变差了
 
 aug15 

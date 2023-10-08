@@ -202,8 +202,8 @@ class VID_Trans(nn.Module):
         
         self.shift_num = 5
         self.part = 4
-        self.rearrange=True 
-        
+        self.rearrange=True
+
 
 
     # model(img, pid, cam_label=target_cam) test中 model(imgs, pids, cam_label=camids)
@@ -230,7 +230,7 @@ class VID_Trans(nn.Module):
         # global branch gb的attetnion就是论文中的 temporal spatial attention
         b1_feat = self.b1(features) # [128, 129, 768]，b1是一个blcok+ mlp layernormal，所以尺寸和features一样。 这里 129 表示的是128个patch加上一个cls token，然后每一个patch的特征是 128 * 768维的。
         global_feat = b1_feat[:, 0] # [128, 768] 取第一个token 当做global feature
-        
+
         global_feat=global_feat.unsqueeze(dim=2) # [128, 768, 1] tensor
         global_feat=global_feat.unsqueeze(dim=3) # [128, 768, 1, 1] tensor
         a = F.relu(self.attention_conv(global_feat)) # [128, 256, 1, 1] tensor
@@ -239,14 +239,14 @@ class VID_Trans(nn.Module):
         a = F.relu(self.attention_tconv(a)) # [32, 256, 4] ---> [32, 1, 4] tensor
         a = a.view(b, t) # [32, 1, 4] ---> [32, 4]
         a_vals = a # 这个东西看做是 temporal spatial attention的权重，
-        
+
         a = F.softmax(a, dim=1) # [32, 4]，dim=1意思就是 再4这个维度上做， 再哪个维度上做，那哪个维度的值加起来等于1，这里就是4个值加起来等于1
         x = global_feat.view(b, t, -1) # [128,3,256,128] ---> [32, 4, 768]，global_feat[128 768 1 1]   这里不是形状的改变 而是相当于把x改变了一个值，所以相对来说前面x应该换一个名字
         a = torch.unsqueeze(a, -1) # [32, 4] ---> [32, 4, 1]
         a = a.expand(b, t, self.in_planes) # [32, 4, 1] ---> [32, 4, 768] 几层括号就是几维的tensor
         att_x = torch.mul(x,a) # [32, 4, 768]  element-wise multiplication
         att_x = torch.sum(att_x,1) # [32, 4, 768] ---> [32, 768]  沿着时间维度进行求和
-        
+
         global_feat = att_x.view(b,self.in_planes) # 这里也是 原来 global_feat是[128, 768, 1, 1] tensor，现在直接给变成了[32, 768] tensor，并不是转化呢，而是重新赋值了
         feat = self.bottleneck(global_feat) #  [32, 768] BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
 
@@ -255,11 +255,11 @@ class VID_Trans(nn.Module):
 
         feature_length = features.size(1) - 1 # 129-1=128
         patch_length = feature_length // 4 # 128/4=32
-        
+
         #Temporal clip shift and shuffled，混合完了  分出去4个头 然后各自有各自的loss
         x ,token=TCSS(features, self.shift_num, b,t) # [128, 129, 768] ---> [32,128,3072]  [32,1,3072] 这个token 应该和上面global_feat [128, 768] 是一个东西 也就是说下面拿到的4个part也都混合了 global的特征
-        
-           
+
+
         # part1
         part1 = x[:, :patch_length] # [32, 32, 3072] 似乎
         part1 = self.b2(torch.cat((token, part1), dim=1))# [32, 32, 3072] ---> [32, 33, 3072]  这里是先concat 然后经过了一个block+ layer norm 也就是又混合了一词特征 才去的第一个token
@@ -279,27 +279,27 @@ class VID_Trans(nn.Module):
         part4 = x[:, patch_length*3:patch_length*4]
         part4 = self.b2(torch.cat((token, part4), dim=1))
         part4_f = part4[:, 0]
-       
-        
+
+
         #4个头 #测试的时候是[b,3072]
         part1_bn = self.bottleneck_1(part1_f) # [32, 3072]
         part2_bn = self.bottleneck_2(part2_f)
         part3_bn = self.bottleneck_3(part3_f)
         part4_bn = self.bottleneck_4(part4_f)
-        
+
         if self.training: # 32个视频
-            
+
             Global_ID = self.classifier(feat) # [32, 768] ---> [32, 625]
             Local_ID1 = self.classifier_1(part1_bn) # [32, 3072] ---> [32, 625]
             Local_ID2 = self.classifier_2(part2_bn) # [32, 3072] ---> [32, 625]
             Local_ID3 = self.classifier_3(part3_bn) # [32, 3072] ---> [32, 625]
             Local_ID4 = self.classifier_4(part4_bn) # [32, 3072] ---> [32, 625]
              #loss_id ,center
-            return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals #[global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals 
-        
+            return [Global_ID, Local_ID1, Local_ID2, Local_ID3, Local_ID4 ], [global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals #[global_feat, part1_f, part2_f, part3_f,part4_f],  a_vals
+
         else:
               return torch.cat([feat, part1_bn/4 , part2_bn/4 , part3_bn /4, part4_bn/4 ], dim=1) # b,13056--3072*4+768
-            
+
 
 
     def load_param(self, trained_path,load=False):
