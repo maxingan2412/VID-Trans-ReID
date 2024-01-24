@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="VID-Trans-ReID" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="VID-Trans-ReID" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="vitnew" project-jdk-type="Python SDK" />
 </project>
