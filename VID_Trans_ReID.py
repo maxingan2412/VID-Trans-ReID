@@ -102,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--seq_len', default=4, type=int, help='seq len')
     parser.add_argument(
-        '--num_workers', default=8, type=int, help='num workers')
+        '--num_workers', default=24, type=int, help='num workers')
 
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
@@ -211,10 +211,10 @@ if __name__ == '__main__':
             acc_meter.update(acc, 1)
 
             torch.cuda.synchronize() # 这是一个CUDA操作同步指令。当你执行一个CUDA操作时，例如GPU上的张量操作，它通常是异步的。这意味着CPU代码会继续执行，而不等待GPU操作完成。这条指令会使CPU等待直到所有CUDA流中的任务都完成。在性能分析、时间测量或确保特定操作前后的数据一致性时，这很有用
-            if (Epoch_n + 1) % 10 == 0: #822 train_loader bs越大 这个就越小，比如 bs128的时候从log中看出这个是59，64的时候是118
-                print("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, Acc: {:.3f}, Base Lr: {:.2e}"
-                            .format(epoch, (Epoch_n + 1), len(train_loader),
-                                    loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
+            #if (Epoch_n + 1) % 10 == 0: #822 train_loader bs越大 这个就越小，比如 bs128的时候从log中看出这个是59，64的时候是118
+            print("Epoch[{}] Iteration[{}/{}] Loss: {:.3f}, Acc: {:.3f}, Base Lr: {:.2e}"
+                        .format(epoch, (Epoch_n + 1), len(train_loader),
+                                loss_meter.avg, acc_meter.avg, scheduler._get_lr(epoch)[0]))
 
         if (epoch+1)%test_epoches == 0 :
             model.eval()

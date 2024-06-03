@@ -44,7 +44,8 @@ class iLIDSVID(object):
     Args:
         split_id (int): indicates which split to use. There are totally 10 splits.
     """
-    root  ="iLIDS-VID"
+    #root  ="iLIDS-VID"
+    root = '../data/iLIDS-VID'
     # root = '/mnt/scratch/1/pathak/data/iLIDS'
     # root = './data/ilids-vid'
     dataset_url = 'http://www.eecs.qmul.ac.uk/~xiatian/iLIDS-VID/iLIDS-VID.tar'

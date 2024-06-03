@@ -220,7 +220,9 @@ def extract_features(data_loader, model, use_gpu=True, pool='avg'):
 
         else:
             for batch_idx, data in enumerate(tqdm(data_loader)):
-                imgs, pids, camids = data
+                #imgs, pids, camids = data[0]
+                #imgs, pids, camids, *rest = data[0] + [None, None, None]
+                imgs, pids, camids,_ = data[0]
                 if use_gpu:
                     imgs = imgs.cuda(non_blocking=True)
 
@@ -320,7 +322,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--seq_len', default=4, type=int, help='seq len')
     parser.add_argument(
-        '--num_workers', default=8, type=int, help='num workers')
+        '--num_workers', default=24, type=int, help='num workers')
     args = parser.parse_args()
     Dataset_name=args.Dataset_name
     model_path=args.model_path
