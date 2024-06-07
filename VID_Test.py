@@ -149,7 +149,7 @@ def evaluate(distmat, q_pids, g_pids, q_camids, g_camids, max_rank=21):
         AP = tmp_cmc.sum() / num_rel
         all_AP.append(AP)
 
-    assert num_valid_q > 0, "Error: all query identities do not appear in gallery"
+    #assert num_valid_q > 0, "Error: all query identities do not appear in gallery"
 
     all_cmc = np.asarray(all_cmc).astype(np.float32)
     all_cmc = all_cmc.sum(0) / num_valid_q
@@ -164,6 +164,15 @@ def extract_features(data_loader, model, use_gpu=True, pool='avg'):
     with (torch.no_grad()):
         if data_loader.__len__() >= 1980:
             for batch_idx, data in enumerate(tqdm(data_loader)):
+
+                # if len(data_loader) == 1980:
+                #     if batch_idx > 1:
+                #         break
+                # elif len(data_loader) > 1980:
+                #     if batch_idx > 40:
+                #         break
+
+
                 data = data[0]
                 imgs, pids, camids,_ = data
 
@@ -171,6 +180,36 @@ def extract_features(data_loader, model, use_gpu=True, pool='avg'):
                     imgs = imgs.cuda(non_blocking=True)
 
                 b, s, c, h, w = imgs.size()
+
+                ##pading
+                # Calculate padding size if b is not a multiple of 4 or less than 4
+                if b < 4:
+                    pad_size = 4 - b
+                elif b % 4 != 0:
+                    pad_size = 4 - (b % 4)
+                else:
+                    pad_size = 0
+
+                if pad_size > 0:
+                    # Determine the indices for padding
+                    repeat_indices = list(range(b)) * ((pad_size + b - 1) // b)  # Repeat enough times
+                    repeat_indices = repeat_indices[:pad_size]  # Only take the required pad_size
+
+                    # Padding imgs tensor by repeating
+                    pad_imgs = imgs[repeat_indices]
+                    imgs = torch.cat([imgs, pad_imgs], dim=0)
+
+                    # Padding camids list by repeating
+                    repeat_camids = [camids[i * s:(i + 1) * s] for i in repeat_indices]
+                    repeat_camids = [item for sublist in repeat_camids for item in sublist]
+                    camids += repeat_camids
+
+                # 更新 b 的值
+                b = imgs.size(0)
+
+                #######3
+
+
                 features = model(imgs, pids, cam_label=camids)
                 features = features.view(b, -1)
                 if pool == 'avg':

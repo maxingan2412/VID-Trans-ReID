@@ -159,6 +159,25 @@ if __name__ == '__main__':
         start_time = time.time()
         loss_meter.reset()
         acc_meter.reset()
+        #这里方便测试
+        if 1 > 2:
+            if (epoch+1)%test_epoches == 0 :
+                model.eval()
+                cmc,map = test(model, q_val_set,g_val_set)
+                print('CMC: %.4f, mAP : %.4f'%(cmc,map))
+               # if cmc_rank1 < cmc:
+               #    cmc_rank1=cmc
+
+                save_path = 'VID-Trans-ReID_pth'
+                current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+                file_name = f"{Dataset_name}_BS{batch_size}_Epoch{epoch}_CMC{cmc:.4f}_MAP{map:.4f}_{current_time}.pth"
+                save_filename = os.path.join(save_path, file_name)
+
+              # 创建目录，如果它不存在
+                if not os.path.exists(save_path):
+                    os.makedirs(save_path)
+                torch.save(model.state_dict(), save_filename)
         
         scheduler.step(epoch)
         model.train()
