@@ -13,6 +13,7 @@ import torch.nn.functional as F
 # else:
 #     import collections.abc as container_abcs
 import collections.abc as container_abcs
+from einops import rearrange
 
 # From PyTorch internals
 def _ntuple(n):
@@ -106,6 +107,26 @@ class Attention(nn.Module):
         return x
 
 
+class Block_old(nn.Module):
+
+    def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
+                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.norm1 = norm_layer(dim)
+        self.attn = Attention(
+            dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop)
+        # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.norm2 = norm_layer(dim)
+        mlp_hidden_dim = int(dim * mlp_ratio)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+
+
+    def forward(self, x):
+        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        return x
+
 class Block(nn.Module):
 
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
@@ -120,9 +141,26 @@ class Block(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
+        ####adapter
+        self.s_adapter = Adapter(dim)
+        self.t_adapter = Adapter(dim)
+        self.mlp_adapter = Adapter(dim)
+        self.scale = 1.0
+
     def forward(self, x):
-        x = x + self.drop_path(self.attn(self.norm1(x)))
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
+
+        bt, n, d = x.shape
+        t = 4
+        ## temporal adaptation
+        xt = rearrange(x, '(b t) n d -> (b n) t d', t=t)
+        xt = self.t_adapter(self.attn(self.norm1(xt)))
+        xt = rearrange(xt, '(b n) t d ->(b t) n d', n=n)
+        x = x + self.drop_path(xt)
+        ## spatial adaptation
+        x = x + self.s_adapter(self.attn(self.norm1(x)))
+        ## joint adaptation
+        xn = self.norm2(x)
+        x = x + self.mlp(xn) + self.drop_path(self.scale * self.mlp_adapter(xn))
         return x
 
 
@@ -192,45 +230,219 @@ class PatchEmbed_overlap(nn.Module):
         return x
 
 
-class TransReID(nn.Module):
+# class TransReID(nn.Module):
+#     """ Transformer-based Object Re-Identification
+#     """
+#     def __init__(self, img_size=224, patch_size=16, stride_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
+#                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., camera=0,
+#                  drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, cam_lambda =3.0):
+#         super().__init__()
+#         self.num_classes = num_classes
+#         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+#
+#         self.cam_num = camera
+#         self.cam_lambda = cam_lambda
+#
+#
+#         self.patch_embed = PatchEmbed_overlap(img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,embed_dim=embed_dim)
+#         num_patches = self.patch_embed.num_patches
+#
+#         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim)) #设置可学习的位置编码 1 129 768
+#         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) # 设置可学习的分类标签 1 1 768
+#         self.Cam = nn.Parameter(torch.zeros(camera, 1, embed_dim)) # 设置可学习的相机标签 6 1 768
+#
+#         trunc_normal_(self.Cam, std=.02) # 这里当做是给cam一个截断的正态分布的初始化 其中标准差为0.02
+#         self.pos_drop = nn.Dropout(p=drop_rate)
+#         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  #在深度神经网络的训练中，随机深度（stochastic depth）是一种正则化技术，通过在每个训练样本中随机“删除”（跳过）网络中的一些层来增强模型的鲁棒性。在训练过程中，对于每个层，以一定的概率（由 dpr 中的值决定）将其跳过，这样可以模拟网络的一种剪枝（pruning）效果，从而强制模型学习更具鲁棒性的特征。在推理时，所有的层都会被保留。 # stochastic depth decay rule
+#         #x.item() 是用于从一个标量（只包含一个元素）的 PyTorch 张量中提取该元素的值的方法。如果张量包含多个元素，则调用 item() 会引发错误，因为它只能用于标量张量。
+#         self.blocks = nn.ModuleList([
+#             Block(
+#                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
+#                 drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer) #这里的Block就是定义了Transformer中的Block结构
+#             for i in range(depth)])
+#
+#         self.norm = norm_layer(embed_dim) #LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+#
+#         # Classifier head
+#         self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity() # 构造一个全连接层，输入是768，输出是num_classes
+#         trunc_normal_(self.cls_token, std=.02)
+#         trunc_normal_(self.pos_embed, std=.02)
+#
+#         self.apply(self._init_weights)
+#
+#     def _init_weights(self, m):
+#         if isinstance(m, nn.Linear):
+#             trunc_normal_(m.weight, std=.02)
+#             if isinstance(m, nn.Linear) and m.bias is not None:
+#                 nn.init.constant_(m.bias, 0)
+#         elif isinstance(m, nn.LayerNorm):
+#             nn.init.constant_(m.bias, 0)
+#             nn.init.constant_(m.weight, 1.0)
+#
+#     @torch.jit.ignore
+#     def no_weight_decay(self):
+#         return {'pos_embed', 'cls_token'}
+#
+#     def get_classifier(self):
+#         return self.head
+#
+#     def reset_classifier(self, num_classes, global_pool=''):
+#         self.num_classes = num_classes
+#         self.fc = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
+#
+#     def forward_features(self, x, camera_id): #transreid的前向传播
+#         B = x.shape[0]
+#         #823测试的时候不一定是 128 是随着 tracklet长度变化而变化的，不管b是不是固定的 patch_embed不会改变b
+#         x = self.patch_embed(x) # [128,3,256,128] -> [128,128,768] 是这样的 转化的第一位是bs所以还是128 不变，最后一位是embed_dim 所以是768，中间的就是patch数量，计算得到 128
+#
+#         #####vivit最简单的形式 ##########
+#         # x = x.view(B//4,4,3,256,128)
+#         # frametokenlist = []
+#         # for i in range(x.size(1)):
+#         #     singleframetoken = self.patch_embed(x[:,i])
+#         #     frametokenlist.append(singleframetoken)
+#         # x = torch.concat(frametokenlist,1)
+#
+#
+#
+#         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks 823 b 1 768
+#         x = torch.cat((cls_tokens, x), dim=1)
+#         x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id] # self.Cam[camera_id]就是我们初始化了6中相机id的参数，这里呢我们有了这些b*seq个样本的图像，也就有了这么多的图片，我们按照他们的id分别载入这些参数
+#         x = self.pos_drop(x)
+#
+#         for blk in self.blocks[:-1]:
+#                 x = blk(x)
+#         return x
+#
+#
+#     def forward(self, x, cam_label=None):
+#         x = self.forward_features(x, cam_label)
+#         return x
+#
+#     def load_param(self, model_path, load=False):
+#         if not load:
+#             param_dict = torch.load(model_path, map_location='cpu')
+#         else:
+#             param_dict = model_path
+#         if 'model' in param_dict:
+#             param_dict = param_dict['model']
+#         if 'state_dict' in param_dict:
+#             param_dict = param_dict['state_dict']
+#         for k, v in param_dict.items():
+#             if 'head' in k or 'dist' in k:
+#                 continue
+#             if 'patch_embed.proj.weight' in k and len(v.shape) < 4:
+#                 # For old models that I trained prior to conv based patchification
+#                 O, I, H, W = self.patch_embed.proj.weight.shape
+#                 v = v.reshape(O, -1, H, W)
+#             elif k == 'pos_embed' and v.shape != self.pos_embed.shape:
+#                 # To resize pos embedding when using model at different size from pretrained weights
+#                 if 'distilled' in model_path:
+#                     print('distill need to choose right cls token in the pth')
+#                     v = torch.cat([v[:, 0:1], v[:, 2:]], dim=1)
+#                 v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
+#             try:
+#                 if k in self.state_dict():
+#                     self.state_dict()[k].copy_(v)
+#                 else:
+#                     print('Skipping loading of {} because it does not exist in the model.'.format(k))
+#             except:
+#                 print('===========================ERROR=========================')
+#                 print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape,
+#                                                                                                 self.state_dict()[
+#                                                                                                     k].shape))
+#
+#     def load_param_old(self, model_path,load=False):
+#         if not load:
+#             param_dict = torch.load(model_path, map_location='cpu')
+#         else:
+#             param_dict=  model_path
+#         if 'model' in param_dict:
+#             param_dict = param_dict['model']
+#         if 'state_dict' in param_dict:
+#             param_dict = param_dict['state_dict']
+#         for k, v in param_dict.items():
+#             if 'head' in k or 'dist' in k:
+#                 continue
+#             if 'patch_embed.proj.weight' in k and len(v.shape) < 4:
+#                 # For old models that I trained prior to conv based patchification
+#                 O, I, H, W = self.patch_embed.proj.weight.shape
+#                 v = v.reshape(O, -1, H, W)
+#             elif k == 'pos_embed' and v.shape != self.pos_embed.shape:
+#                 # To resize pos embedding when using model at different size from pretrained weights
+#                 if 'distilled' in model_path:
+#                     print('distill need to choose right cls token in the pth')
+#                     v = torch.cat([v[:, 0:1], v[:, 2:]], dim=1)
+#                 v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
+#             try:
+#                 self.state_dict()[k].copy_(v)
+#             except:
+#                 print('===========================ERROR=========================')
+#                 print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape, self.state_dict()[k].shape))
+
+
+
+class Adapter(nn.Module):
+    def __init__(self, D_features, mlp_ratio=0.25, act_layer=nn.GELU, skip_connect=True):
+        super().__init__()
+        self.skip_connect = skip_connect
+        D_hidden_features = int(D_features * mlp_ratio)
+        self.act = act_layer()
+        self.D_fc1 = nn.Linear(D_features, D_hidden_features)
+        self.D_fc2 = nn.Linear(D_hidden_features, D_features)
+
+    def forward(self, x):
+        # x is (BT, HW+1, D)
+        xs = self.D_fc1(x)
+        xs = self.act(xs)
+        xs = self.D_fc2(xs)
+        if self.skip_connect:
+            x = x + xs
+        else:
+            x = xs
+        return x
+
+
+class TransReID_old(nn.Module):
     """ Transformer-based Object Re-Identification
     """
     def __init__(self, img_size=224, patch_size=16, stride_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
-                 num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., camera=0, 
-                 drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, cam_lambda =3.0):
+                 num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., camera=0,
+                 drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, cam_lambda=3.0):
         super().__init__()
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
-       
+
         self.cam_num = camera
         self.cam_lambda = cam_lambda
 
-
-        self.patch_embed = PatchEmbed_overlap(img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans,embed_dim=embed_dim)
+        self.patch_embed = PatchEmbed_overlap(img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans, embed_dim=embed_dim)
         num_patches = self.patch_embed.num_patches
 
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim)) #设置可学习的位置编码 1 129 768
-        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) # 设置可学习的分类标签 1 1 768
-        self.Cam = nn.Parameter(torch.zeros(camera, 1, embed_dim)) # 设置可学习的相机标签 6 1 768
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))  # 设置可学习的位置编码 1 129 768
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))  # 设置可学习的分类标签 1 1 768
+        self.Cam = nn.Parameter(torch.zeros(camera, 1, embed_dim))  # 设置可学习的相机标签 6 1 768
 
-        trunc_normal_(self.Cam, std=.02) # 这里当做是给cam一个截断的正态分布的初始化 其中标准差为0.02
+        trunc_normal_(self.Cam, std=.02)  # 这里当做是给cam一个截断的正态分布的初始化 其中标准差为0.02
         self.pos_drop = nn.Dropout(p=drop_rate)
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  #在深度神经网络的训练中，随机深度（stochastic depth）是一种正则化技术，通过在每个训练样本中随机“删除”（跳过）网络中的一些层来增强模型的鲁棒性。在训练过程中，对于每个层，以一定的概率（由 dpr 中的值决定）将其跳过，这样可以模拟网络的一种剪枝（pruning）效果，从而强制模型学习更具鲁棒性的特征。在推理时，所有的层都会被保留。 # stochastic depth decay rule
-        #x.item() 是用于从一个标量（只包含一个元素）的 PyTorch 张量中提取该元素的值的方法。如果张量包含多个元素，则调用 item() 会引发错误，因为它只能用于标量张量。
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+
         self.blocks = nn.ModuleList([
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
-                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer) #这里的Block就是定义了Transformer中的Block结构
+                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)  # 这里的Block就是定义了Transformer中的Block结构
             for i in range(depth)])
 
-        self.norm = norm_layer(embed_dim) #LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+        self.norm = norm_layer(embed_dim)  # LayerNorm((768,), eps=1e-06, elementwise_affine=True)
 
         # Classifier head
-        self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity() # 构造一个全连接层，输入是768，输出是num_classes
+        self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()  # 构造一个全连接层，输入是768，输出是num_classes
         trunc_normal_(self.cls_token, std=.02)
         trunc_normal_(self.pos_embed, std=.02)
 
         self.apply(self._init_weights)
+
+
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -252,34 +464,26 @@ class TransReID(nn.Module):
         self.num_classes = num_classes
         self.fc = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x, camera_id): #transreid的前向传播
+    def forward_features(self, x, camera_id):  # transreid的前向传播
         B = x.shape[0]
-        #823测试的时候不一定是 128 是随着 tracklet长度变化而变化的，不管b是不是固定的 patch_embed不会改变b
-        x = self.patch_embed(x) # [128,3,256,128] -> [128,128,768] 是这样的 转化的第一位是bs所以还是128 不变，最后一位是embed_dim 所以是768，中间的就是patch数量，计算得到 128
-
-        #####vivit最简单的形式 ##########
-        # x = x.view(B//4,4,3,256,128)
-        # frametokenlist = []
-        # for i in range(x.size(1)):
-        #     singleframetoken = self.patch_embed(x[:,i])
-        #     frametokenlist.append(singleframetoken)
-        # x = torch.concat(frametokenlist,1)
-
-
+        x = self.patch_embed(x)  # [128,3,256,128] -> [128,128,768]
 
         cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks 823 b 1 768
         x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id] # self.Cam[camera_id]就是我们初始化了6中相机id的参数，这里呢我们有了这些b*seq个样本的图像，也就有了这么多的图片，我们按照他们的id分别载入这些参数
+        x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id]  # self.Cam[camera_id]是相机标签参数
         x = self.pos_drop(x)
 
-        for blk in self.blocks[:-1]:
-                x = blk(x)
+        for blk in self.blocks:
+            x = blk(x)
         return x
 
-        
     def forward(self, x, cam_label=None):
         x = self.forward_features(x, cam_label)
         return x
+
+    def freeze_parameters(self):
+        for param in self.parameters():
+            param.requires_grad = False
 
     def load_param(self, model_path, load=False):
         if not load:
@@ -314,11 +518,11 @@ class TransReID(nn.Module):
                                                                                                 self.state_dict()[
                                                                                                     k].shape))
 
-    def load_param_old(self, model_path,load=False):
+    def load_param_old(self, model_path, load=False):
         if not load:
             param_dict = torch.load(model_path, map_location='cpu')
         else:
-            param_dict=  model_path  
+            param_dict = model_path
         if 'model' in param_dict:
             param_dict = param_dict['model']
         if 'state_dict' in param_dict:
@@ -341,6 +545,126 @@ class TransReID(nn.Module):
             except:
                 print('===========================ERROR=========================')
                 print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape, self.state_dict()[k].shape))
+
+class TransReID(nn.Module):
+    """ Transformer-based Object Re-Identification
+    """
+    def __init__(self, img_size=224, patch_size=16, stride_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
+                 num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0., camera=0,
+                 drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, cam_lambda=3.0):
+        super().__init__()
+        self.num_classes = num_classes
+        self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
+
+        self.cam_num = camera
+        self.cam_lambda = cam_lambda
+
+        self.patch_embed = PatchEmbed_overlap(img_size=img_size, patch_size=patch_size, stride_size=stride_size, in_chans=in_chans, embed_dim=embed_dim)
+        num_patches = self.patch_embed.num_patches
+
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))  # 设置可学习的位置编码 1 129 768
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))  # 设置可学习的分类标签 1 1 768
+        self.Cam = nn.Parameter(torch.zeros(camera, 1, embed_dim))  # 设置可学习的相机标签 6 1 768
+
+        trunc_normal_(self.Cam, std=.02)  # 这里当做是给cam一个截断的正态分布的初始化 其中标准差为0.02
+        self.pos_drop = nn.Dropout(p=drop_rate)
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+
+        self.blocks = nn.ModuleList([
+            Block(
+                dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
+                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)  # 这里的Block就是定义了Transformer中的Block结构
+            for i in range(depth)])
+
+        self.norm = norm_layer(embed_dim)  # LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+
+        # Classifier head
+        self.fc = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()  # 构造一个全连接层，输入是768，输出是num_classes
+        trunc_normal_(self.cls_token, std=.02)
+        trunc_normal_(self.pos_embed, std=.02)
+
+        self.apply(self._init_weights)
+
+        # 冻结参数
+        self.freeze_non_adapter_parameters()
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    @torch.jit.ignore
+    def no_weight_decay(self):
+        return {'pos_embed', 'cls_token'}
+
+    def get_classifier(self):
+        return self.head
+
+    def reset_classifier(self, num_classes, global_pool=''):
+        self.num_classes = num_classes
+        self.fc = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
+
+    def forward_features(self, x, camera_id):  # transreid的前向传播
+        B = x.shape[0]
+        x = self.patch_embed(x)  # [128,3,256,128] -> [128,128,768]
+
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks 823 b 1 768
+        x = torch.cat((cls_tokens, x), dim=1)
+        x = x + self.pos_embed + self.cam_lambda * self.Cam[camera_id]  # self.Cam[camera_id]是相机标签参数
+        x = self.pos_drop(x)
+
+        for blk in self.blocks:
+            x = blk(x)
+        return x
+
+    def forward(self, x, cam_label=None):
+        x = self.forward_features(x, cam_label)
+        return x
+
+
+    def freeze_non_adapter_parameters(self):
+        for name, param in self.named_parameters():
+            if 'adapter' not in name:
+                param.requires_grad = False
+
+    def load_param(self, model_path, load=False):
+        if not load:
+            param_dict = torch.load(model_path, map_location='cpu')
+        else:
+            param_dict = model_path
+        if 'model' in param_dict:
+            param_dict = param_dict['model']
+        if 'state_dict' in param_dict:
+            param_dict = param_dict['state_dict']
+        for k, v in param_dict.items():
+            if 'head' in k or 'dist' in k:
+                continue
+            if 'patch_embed.proj.weight' in k and len(v.shape) < 4:
+                # For old models that I trained prior to conv based patchification
+                O, I, H, W = self.patch_embed.proj.weight.shape
+                v = v.reshape(O, -1, H, W)
+            elif k == 'pos_embed' and v.shape != self.pos_embed.shape:
+                # To resize pos embedding when using model at different size from pretrained weights
+                if 'distilled' in model_path:
+                    print('distill need to choose right cls token in the pth')
+                    v = torch.cat([v[:, 0:1], v[:, 2:]], dim=1)
+                v = resize_pos_embed(v, self.pos_embed, self.patch_embed.num_y, self.patch_embed.num_x)
+            try:
+                if k in self.state_dict():
+                    self.state_dict()[k].copy_(v)
+                else:
+                    print('Skipping loading of {} because it does not exist in the model.'.format(k))
+            except:
+                print('===========================ERROR=========================')
+                print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape,
+                                                                                                self.state_dict()[
+                                                                                                    k].shape))
+
+
 
 
 class TransReIDVideo(nn.Module):

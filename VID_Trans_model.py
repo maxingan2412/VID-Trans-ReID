@@ -119,6 +119,8 @@ def weights_init_classifier(m):
             nn.init.constant_(m.bias, 0.0)
 
 
+
+
 class VID_Trans(nn.Module):
     def __init__(self, num_classes, camera_num,pretrainpath,seq_len):
         super(VID_Trans, self).__init__()
@@ -130,11 +132,18 @@ class VID_Trans(nn.Module):
         img_size=[256, 128], patch_size=16, stride_size=[16, 16], embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,\
         camera=camera_num,  drop_path_rate=0.1, drop_rate=0.0, attn_drop_rate=0.0,norm_layer=partial(nn.LayerNorm, eps=1e-6),  cam_lambda=3.0)
         
-          
+        #self.base.freeze_parameters()
+
         state_dict = torch.load(pretrainpath, map_location='cpu') # jx 这个是pretained vit，state_dict是一个字典，里面包括模型的各层的一些参数,map是加载的位置
         state_dict_imagenet = torch.load('jx_vit_base_p16_224-80ecf9dd.pth', map_location='cpu')
         self.base.load_param(state_dict_imagenet,load=True) #给模型加载这些参数
         self.base.load_param(state_dict,load=True) #给模型加载这些参数
+
+        # for name, param in self.base.named_parameters():
+        #     if param.requires_grad:
+        #         print(f'Parameter {name} is not frozen.')
+
+
         
        
         #global stream
